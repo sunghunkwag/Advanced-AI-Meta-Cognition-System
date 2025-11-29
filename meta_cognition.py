@@ -1,5 +1,5 @@
 """
-Meta-Cognition Module (V4.0 - System 2)
+Meta-Cognition Module (System 2)
 
 The "Manager" of the mind.
 Decides WHEN to think (System 2) and WHEN to act (System 1).

@@ -1,4 +1,4 @@
-# Advanced AI Meta Cognition System (V4.0)
+# Advanced AI Meta Cognition System
 
 > **"From Reaction to Deliberation. The Inner Eye Awakens."**
 
@@ -6,7 +6,7 @@
 
 ## Core Philosophy: The Inner Eye
 
-Unlike V3.5, which acted based on immediate intuition, **V4.0** possesses the ability to **simulate the future** in its mind before acting in reality.
+Unlike previous versions, which acted based on immediate intuition, this system possesses the ability to **simulate the future** in its mind before acting in reality.
 
 ### 🧠 System 1: Intuition (Fast)
 - **Mechanism:** `ActionDecoder` (Policy Network)
@@ -67,4 +67,4 @@ python main_system.py
 
 **Architect:** User (The Director)  
 **Engineer:** Gemini (Lead Architect)  
-**Version:** V4.0 (System 2 Thinking)
+**Version:** System 2 Thinking

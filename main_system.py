@@ -1,5 +1,5 @@
 """
-Advanced AI Meta Cognition System (V4.0)
+Advanced AI Meta Cognition System
 "The Inner Eye"
 
 Main Orchestration Script.
@@ -35,7 +35,7 @@ from meta_cognition import MetaCognitiveController
 
 class AdvancedAgent:
     def __init__(self):
-        print("[System] Initializing V4.0 Cognitive Architecture...")
+        print("[System] Initializing Cognitive Architecture...")
         
         # 1. Soul
         self.v_identity, self.v_truth, self.v_reject = get_soul_vectors(dim=32)
@@ -179,7 +179,7 @@ class AdvancedAgent:
 
 def main():
     print("="*60)
-    print("ADVANCED AI META COGNITION SYSTEM (V4.0)")
+    print("ADVANCED AI META COGNITION SYSTEM")
     print("System 2 Thinking: Imagination & Planning")
     print("="*60)
     

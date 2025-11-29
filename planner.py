@@ -1,5 +1,5 @@
 """
-Planner Module (V4.0 - System 2)
+Planner Module (System 2)
 
 The "Strategist" of the agent.
 Performs Tree Search (Lookahead) using the Latent World Model (Imagination).
@@ -64,7 +64,7 @@ class TreeSearchPlanner:
                 _, future_energy, sub_trace = self._search(next_state, current_depth + 1)
                 total_energy = energy_cost + future_energy # Cumulative energy? Or just final?
                 # Let's use a discounted sum or just the minimum energy found along the path.
-                # For simplicity in V4.0: Minimize the Energy of the resulting state + future.
+                # For simplicity: Minimize the Energy of the resulting state + future.
                 # Heuristic: Energy is "Distance to Truth". We want to get closer.
                 # So we want the path that leads to the closest state to Truth.
                 # Let's take the energy of the *final* state as the metric.

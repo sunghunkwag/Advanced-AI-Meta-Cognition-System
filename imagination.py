@@ -1,5 +1,5 @@
 """
-Imagination Module (V4.0 - System 2)
+Imagination Module (System 2)
 
 The "Inner Eye" of the agent.
 Wraps the JEPA Predictor to allow latent space simulation.
