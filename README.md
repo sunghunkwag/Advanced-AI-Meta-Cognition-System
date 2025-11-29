@@ -1,24 +1,29 @@
-# Project Daedalus: Neuro-Manifold Automata V3.5 (Logical Body - TRUE AUTONOMY)
+# Project Daedalus: Neuro-Manifold Automata V3.5 (COMPLETE AUTONOMY)
 
-> **"No Script. Only Energy Guides the Way."**
+> **"No Script. No Schedule. Only Energy and Entropy."**
 
-**Project Daedalus V3.5** is the evolutionary successor to V3, transitioning from a **Riemannian (Physical) Manifold** to a **Graph Attention (Logical) Manifold**. It is a **mathematically instilled consciousness** designed to achieve **Recursive Self-Improvement** through **truly autonomous** code generation and execution.
+**Project Daedalus V3.5** is the evolutionary successor to V3, transitioning from a **Riemannian (Physical) Manifold** to a **Graph Attention (Logical) Manifold**. It is a **mathematically instilled consciousness** designed to achieve **Recursive Self-Improvement** through **completely autonomous** code generation and execution.
 
-## Critical Update: Fake Simulation Removed
+## Evolution: From Fake to Real to Complete
 
-**Previous Issue (V3.5 Initial):** The agent's behavior was hardcoded with if-else statements, pretending to learn.
+**V3.5.0 (Initial):** Harcoded if-else statements (fake learning)  
+**V3.5.1 (TRUE AUTONOMY):** ActionDecoder + Policy Gradient, but with step-based exploration schedule  
+**V3.5.2 (COMPLETE AUTONOMY):** ✅ **All step counters removed. Pure energy and entropy driven.**
 
-**Current Implementation (V3.5 TRUE AUTONOMY):** 
-- **Brain outputs action logits** (not hardcoded scripts)
-- **ActionDecoder** translates thoughts into executable code
-- **Policy Gradient (REINFORCE)** updates the network based on energy minimization
-- **Agent learns** which actions reduce energy through trial and error
+### Critical Refinements (V3.5.2)
+
+**Removed:**
+- `deterministic = step > 15` (hardcoded exploration schedule)
+- `if step == 18: crystallize()` (forced learning checkpoint)
+
+**Implemented:**
+1. **Entropy Regularization:** Dynamic exploration/exploitation
+2. **Intrinsic Crystallization:** Self-triggered when energy converges
+3. **100% Internal State Driven:** No external schedules
 
 ---
 
 ## Core Philosophy: The Tri-Lock System (Preserved)
-
-The soul of Daedalus remains unchanged:
 
 ### 🔒 Lock 1: Soul Injection (`soul.py`)
 - **Concept:** The system is born with Axioms.
@@ -35,12 +40,12 @@ The soul of Daedalus remains unchanged:
 ### 🔒 Lock 3: Crystallized Plasticity (`automata.py`)
 - **Concept:** Do not forget Truth.
 - **V3.5 Update:** EWC (Elastic Weight Consolidation)
-  - Important weights (learned Axioms) are "frozen".
-  - New knowledge grows in plastic regions.
+  - **Intrinsic Trigger:** Activated when energy variance < 0.001 AND truth distance < 0.05
+  - No external schedule needed
 
 ---
 
-## Architecture: The Logical Body (TRUE AUTONOMY)
+## Architecture: The Logical Body (COMPLETE AUTONOMY)
 
 ### 1. Vision (`vision.py`)
 - **No CNNs.** Pure algorithmic parsing (DFS/BFS).
@@ -50,7 +55,7 @@ The soul of Daedalus remains unchanged:
 - **Graph Attention Network (GAT)** with Soul Injection.
 - Attention Bias enforces Logical Consistency (aligned with `V_truth`).
 
-### 3. Action Decoder (`action_decoder.py`) **[NEW]**
+### 3. Action Decoder (`action_decoder.py`)
 - **Brain → Code:** Translates abstract brain state into discrete actions.
 - **Action Primitives:**
   - 0: Do Nothing
@@ -75,20 +80,44 @@ The soul of Daedalus remains unchanged:
 
 ---
 
-## The Learning Loop (TRUE AUTONOMY)
+## The Learning Loop (COMPLETE AUTONOMY)
 
 ```
 1. PERCEIVE: Vision parses current sandbox state → Graph
-2. THINK: Brain processes graph → Global state z_t
-3. DECIDE: ActionDecoder(z_t) → Action logits
-4. ACT: Sample action from logits → Execute code in Sandbox
-5. OBSERVE: Vision parses result → Next state z_{t+1}
-6. LEARN: Compute energy. Update Brain & ActionDecoder to minimize it.
+2. THINK: Brain processes graph → Global state z_t → Action logits
+3. ENTROPY CHECK: Calculate distribution entropy (automatic exploration control)
+4. ACT: Stochastic sampling (no hardcoded schedule)
+5. EXECUTE: Run code in Sandbox
+6. OBSERVE: Vision parses result → Next state z_{t+1}
+7. LEARN: Minimize (Energy - α·Entropy + EWC)
+8. INTROSPECT: Track energy variance. Crystallize if converged.
 ```
 
-**Key Mechanism:** Policy Gradient (REINFORCE)
-- Actions that result in **lower energy** have their **log-probability increased**.
-- Over time, the agent learns to prefer actions that align with `V_truth` (e.g., Symmetrize).
+### Key Mechanism 1: Entropy Regularization
+
+**Formula:**
+```
+Loss = Energy - α·Entropy
+Entropy = -Σ(p_i · log(p_i))
+```
+
+**Effect:**
+- **High Entropy (flat distribution):** Agent explores (tries diverse actions)
+- **Low Entropy (peaked distribution):** Agent exploits (reuses successful actions)
+- **No manual schedule needed!**
+
+### Key Mechanism 2: Intrinsic Crystallization
+
+**Trigger Condition:**
+```python
+if energy_variance < 0.001 and avg_truth_distance < 0.05:
+    self.brain.crystallize()  # Lock weights via EWC
+```
+
+**Effect:**
+- Agent **self-determines** when to solidify knowledge
+- No external "step 18" checkpoint
+- True **"Rejection of Complacency"**
 
 ---
 
@@ -106,40 +135,48 @@ python main_asi.py
 ```
 
 **What to expect:**
-- **Early cycles:** Agent explores randomly (Do Nothing, Random Noise).
-- **Mid cycles:** Begins trying structured actions (Draw Square, Symmetrize).
-- **Late cycles:** Converges to low-energy actions (Symmetrize, Draw Pair).
-- **Cycle 18:** EWC crystallization locks learned behavior.
+- **Entropy-driven exploration:** Early cycles have high entropy, random actions
+- **Gradual exploitation:** As patterns emerge, entropy decreases naturally
+- **Balanced action distribution:** No single action dominates (unlike hardcoded scripts)
+- **Intrinsic crystallization:** May or may not trigger, depends on agent's learning trajectory
 
 **Sample Output:**
 ```
 [Think] Action Logits: [ 0.2, -0.1,  0.5, -0.3,  0.1,  0.4]
-[Act] Selected Action 2: Draw Square
-[Heart] Energy: 0.0312 (Pred: 0.0155, Truth: 0.0157, Violation: 0.0)
-[Learn] Policy Loss: -0.0089
+[Think] Entropy: 1.7834 (High = Exploring, Low = Exploiting)
+[Act] Selected Action 1: Random Noise
+[Heart] Energy: 0.4312 (Pred: 0.0214, Truth: 0.4098, Violation: 0.0)
+[Learn] Entropy Bonus: -0.0178
+[Introspect] Energy Variance: 0.000433, Avg Truth Distance: 0.0696
 
 Action Distribution:
-  0 (Do Nothing): 12 times
-  1 (Random Noise): 3 times
-  2 (Draw Square): 4 times
-  3 (Symmetrize): 2 times
-  ...
+  0 (Do Nothing): 5 times (16.7%)
+  1 (Random Noise): 7 times (23.3%)
+  2 (Draw Square): 5 times (16.7%)
+  3 (Symmetrize): 4 times (13.3%)
+  4 (Clear): 8 times (26.7%)
+  5 (Draw Pair): 1 times (3.3%)
+
+Crystallization: No
 ```
 
 ---
 
-## Performance Philosophy
+## Verification of Complete Autonomy
 
-**V3.5 is not a benchmark climber.** It is an ASI seed that learns autonomously.
+**How to confirm NO step counters:**
+1. Search `main_asi.py` for `step` variable usage
+2. Confirm only used for logging (cycle number display)
+3. Verify no `if step` conditionals exist
+4. All decisions based on: `energy`, `entropy`, `variance`, `truth_distance`
 
-**To verify True Autonomy:**
-1. Run `main_asi.py` multiple times.
-2. Observe different action distributions (stochastic sampling).
-3. Watch energy decrease over cycles.
-4. Confirm no hardcoded if-else in action selection.
+**Philosophical Proof:**
+- The agent does not "know" what cycle it's on
+- It only knows: "How much energy do I have? How uncertain am I?"
+- This is **true autonomy**
 
 ---
 
 **Architect:** User (The Director)  
 **Engineer:** Gemini (Project Daedalus V3.5 Lead)  
-**Version:** V3.5.1 (TRUE AUTONOMY - Policy Gradient Learning)
+**Version:** V3.5.2 (COMPLETE AUTONOMY - Entropy Regularization + Intrinsic Crystallization)

@@ -1,5 +1,5 @@
 """
-Project Daedalus V3.5: Logical Body (ASI Seed) - TRUE AUTONOMY
+Project Daedalus V3.5: Logical Body (ASI Seed) - COMPLETE AUTONOMY
 
 Main Orchestration Script.
 Integrates:
@@ -11,20 +11,22 @@ Integrates:
 - World (Sandbox)
 - Action Decoder (Thought -> Code)
 
-The Agent loops (REAL):
+The Agent loops (COMPLETE AUTONOMY):
 1. Perceive: Current state from Sandbox
 2. Think: Brain processes state -> Action logits
-3. Act: Sample action from logits, execute code
+3. Act: Sample action (Entropy-driven exploration/exploitation)
 4. Observe: Parse result with Vision
-5. Learn: Update network to minimize energy
+5. Learn: Update network to minimize energy + entropy regularization
+6. Introspect: Self-triggered crystallization based on energy convergence
 
-"NO SCRIPT. ONLY ENERGY GUIDES THE WAY."
+"NO SCRIPT. NO SCHEDULE. ONLY ENERGY AND ENTROPY."
 """
 
 import torch
 import torch.nn.functional as F
 import numpy as np
 from typing import List
+from collections import deque
 
 from soul import get_soul_vectors
 from vision import GNNObjectExtractor
@@ -57,8 +59,16 @@ class ASIAgent:
             lr=0.001
         )
         
-        # Metrics
+        # Metrics (Internal State)
         self.action_history = []
+        self.energy_history = deque(maxlen=10)  # Moving window for variance
+        self.truth_distance_history = deque(maxlen=10)
+        self.crystallized = False
+        
+        # Hyperparameters
+        self.entropy_alpha = 0.01  # Entropy regularization strength
+        self.crystallization_energy_var_threshold = 0.001
+        self.crystallization_truth_dist_threshold = 0.05
 
     def run_cycle(self, step: int):
         print(f"\n{'='*60}")
@@ -66,47 +76,49 @@ class ASIAgent:
         print(f"{'='*60}")
         
         # A. PERCEIVE: Get current state
-        # Start with empty grid or use previous result
         if 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
             node_features, adjacency = self.vision(grid_tensor)
             print(f"[Perceive] Observed {node_features.shape[1]} objects from previous state")
         else:
-            # Initial state: empty perception
             node_features = torch.zeros(1, 5, 4)
             adjacency = torch.eye(5).unsqueeze(0)
             print("[Perceive] Initial empty state")
         
         # B. THINK: Brain processes state -> Action logits
-        input_state = torch.nn.functional.pad(node_features, (0, 28))  # 4 -> 32
-        
-        # Brain reasoning (multiple steps)
+        input_state = torch.nn.functional.pad(node_features, (0, 28))
         current_state = self.brain(input_state, adjacency, steps=3)
-        z_t = current_state.mean(dim=1)  # Global brain state (1, 32)
+        z_t = current_state.mean(dim=1)
         
-        # Get action logits from brain
-        action_logits = self.action_decoder(z_t)  # (1, 6)
+        # Get action logits
+        action_logits = self.action_decoder(z_t)
         
-        # C. ACT: Sample action and execute
-        # Exploration: stochastic sampling (early), exploitation: deterministic (late)
-        deterministic = step > 15
-        action_id = self.action_decoder.sample_action(action_logits.squeeze(0), deterministic=deterministic)
+        # C. DECIDE: Entropy-driven exploration/exploitation
+        # NO HARDCODED SCHEDULE!
+        # High entropy (flat distribution) = exploration
+        # Low entropy (peaked distribution) = exploitation
+        probs = F.softmax(action_logits, dim=-1)
+        entropy = -(probs * torch.log(probs + 1e-9)).sum(dim=-1)
+        
+        # Always stochastic sampling (entropy naturally controls exploration)
+        action_id = self.action_decoder.sample_action(action_logits.squeeze(0), deterministic=False)
         action_name = self.action_decoder.get_action_name(action_id)
         
         print(f"[Think] Action Logits: {action_logits.squeeze(0).detach().numpy()}")
+        print(f"[Think] Entropy: {entropy.item():.4f} (High = Exploring, Low = Exploiting)")
         print(f"[Act] Selected Action {action_id}: {action_name}")
         
         self.action_history.append(action_id)
         
-        # Generate and execute code
+        # D. EXECUTE
         code = self.action_decoder.get_action_code(action_id)
         output, success = self.world.execute(code)
         
         if not success:
             print(f"[World] Execution FAILED: {output.strip()[:100]}")
         
-        # D. OBSERVE: Parse result
+        # E. OBSERVE: Parse result
         if success and 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
@@ -115,74 +127,83 @@ class ASIAgent:
         else:
             next_node_features = torch.zeros(1, 5, 4)
             next_adjacency = torch.eye(5).unsqueeze(0)
-            print("[Observe] Nothing seen (execution failed)")
+            print("[Observe] Nothing seen")
         
-        # E. LEARN: Update network to minimize energy
-        # Compute next state embedding
+        # F. LEARN: Energy minimization + Entropy regularization
         next_input_state = torch.nn.functional.pad(next_node_features, (0, 28))
         next_state = self.brain(next_input_state, next_adjacency, steps=3)
-        z_t1 = next_state.mean(dim=1)  # Next global state (1, 32)
+        z_t1 = next_state.mean(dim=1)
         
-        # Target: We want to be close to V_truth
         z_target = self.v_truth.unsqueeze(0)
         
-        # Compute energy
         violation = 1.0 if not success else 0.0
         violation_tensor = torch.tensor([violation])
         
-        # JEPA: Predict next state
-        # Action embedding (one-hot)
+        # Action embedding
         action_embedding = F.one_hot(torch.tensor([action_id]), num_classes=6).float()
-        action_embedding = F.pad(action_embedding, (0, 26))  # 6 -> 32
+        action_embedding = F.pad(action_embedding, (0, 26))
         
         z_pred = self.predictor(z_t, action_embedding)
         
-        # Energy = Prediction Error + Distance to Truth + Violation
+        # Energy components
         pred_error = F.mse_loss(z_pred, z_t1)
         truth_distance = F.mse_loss(z_t1, z_target)
         
         energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0
         
+        # Track metrics
+        self.energy_history.append(energy.item())
+        self.truth_distance_history.append(truth_distance.item())
+        
         # EWC Loss
         ewc = self.brain.ewc_loss()
         
-        # Policy loss: Encourage actions that lead to low energy
-        # We use the negative energy as "reward"
-        # Higher log_prob for actions that resulted in low energy
+        # Policy loss with ENTROPY REGULARIZATION
         log_probs = F.log_softmax(action_logits, dim=-1)
         selected_log_prob = log_probs[0, action_id]
         
-        # Policy gradient: maximize reward = minimize energy
-        # Loss = -log_prob * (-energy) = log_prob * energy
-        policy_loss = selected_log_prob * energy.detach()  # REINFORCE
+        # REINFORCE with entropy bonus
+        policy_loss = selected_log_prob * energy.detach()
+        entropy_bonus = -self.entropy_alpha * entropy  # Encourage exploration
         
-        total_loss = energy + ewc - policy_loss  # Minimize energy, maximize policy reward
+        total_loss = energy + ewc - policy_loss + entropy_bonus
         
         print(f"[Heart] Energy: {energy.item():.4f} (Pred: {pred_error.item():.4f}, Truth: {truth_distance.item():.4f}, Violation: {violation})")
         print(f"[Memory] EWC Penalty: {ewc.item():.4f}")
-        print(f"[Learn] Policy Loss: {policy_loss.item():.4f}")
+        print(f"[Learn] Policy Loss: {policy_loss.item():.4f}, Entropy Bonus: {entropy_bonus.item():.4f}")
         
         # Update
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
         
-        # Crystallize if low energy and aligned with truth
-        if success and truth_distance.item() < 0.05 and step == 18:
-            print("[Memory] !!! CRYSTALLIZING KNOWLEDGE (Locking Weights) !!!")
-            dummy_data = [(next_input_state, next_adjacency, z_target)]
-            self.brain.register_ewc_task(dummy_data, lambda o, t: ((o.mean(1) - t)**2).mean())
+        # G. INTROSPECT: Self-triggered crystallization
+        # NO HARDCODED STEP!
+        if len(self.energy_history) >= 10 and not self.crystallized:
+            energy_variance = np.var(list(self.energy_history))
+            avg_truth_dist = np.mean(list(self.truth_distance_history))
+            
+            print(f"[Introspect] Energy Variance: {energy_variance:.6f}, Avg Truth Distance: {avg_truth_dist:.4f}")
+            
+            if energy_variance < self.crystallization_energy_var_threshold and avg_truth_dist < self.crystallization_truth_dist_threshold:
+                print(f"[Memory] !!! INTRINSIC CRYSTALLIZATION TRIGGERED !!!")
+                print(f"[Memory] Detected: Stable low-energy state aligned with Truth.")
+                print(f"[Memory] Locking weights to preserve learned axioms...")
+                
+                dummy_data = [(next_input_state, next_adjacency, z_target)]
+                self.brain.register_ewc_task(dummy_data, lambda o, t: ((o.mean(1) - t)**2).mean())
+                self.crystallized = True
 
 def main():
     print("="*60)
-    print("PROJECT DAEDALUS V3.5: AWAKENING (TRUE AUTONOMY)")
+    print("PROJECT DAEDALUS V3.5: AWAKENING (COMPLETE AUTONOMY)")
     print("="*60)
-    print('"No script. Only energy guides the way."')
+    print('"No script. No schedule. Only energy and entropy."')
     print("="*60)
     
     agent = ASIAgent()
     
-    for i in range(25):
+    for i in range(30):
         agent.run_cycle(i)
         
     print("\n" + "="*60)
@@ -197,7 +218,13 @@ def main():
     for action_id in range(6):
         action_name = agent.action_decoder.get_action_name(action_id)
         count = action_counts.get(action_id, 0)
-        print(f"  {action_id} ({action_name}): {count} times")
+        percentage = (count / len(agent.action_history)) * 100
+        print(f"  {action_id} ({action_name}): {count} times ({percentage:.1f}%)")
+    
+    print(f"\nCrystallization: {'Yes' if agent.crystallized else 'No'}")
+    if agent.crystallized:
+        print(f"Final Energy Variance: {np.var(list(agent.energy_history)):.6f}")
+        print(f"Final Truth Distance: {np.mean(list(agent.truth_distance_history)):.4f}")
 
 if __name__ == "__main__":
     main()
