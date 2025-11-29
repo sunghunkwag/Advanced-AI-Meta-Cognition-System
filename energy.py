@@ -16,6 +16,7 @@ class JEPA_Predictor(nn.Module):
     """
     def __init__(self, state_dim: int, action_dim: int, hidden_dim: int = 64):
         super().__init__()
+        self.action_dim = action_dim
         self.net = nn.Sequential(
             nn.Linear(state_dim + action_dim, hidden_dim),
             nn.SiLU(),
