@@ -12,10 +12,11 @@ import torch.nn.functional as F
 from energy import JEPA_Predictor
 
 class LatentWorldModel(nn.Module):
-    def __init__(self, predictor: JEPA_Predictor, v_truth: torch.Tensor):
+    def __init__(self, predictor: JEPA_Predictor, v_truth: torch.Tensor, energy_fn=None):
         super().__init__()
         self.predictor = predictor
         self.v_truth = v_truth
+        self.energy_fn = energy_fn
         
     def simulate(self, current_state: torch.Tensor, action_id: int, num_actions: int = 6) -> tuple[torch.Tensor, float]:
         """
@@ -51,7 +52,31 @@ class LatentWorldModel(nn.Module):
         # We cannot estimate "Prediction Error" here because we don't have the real outcome yet.
         # We also assume no "Logical Violation" in imagination (optimistic).
         
-        z_target = self.v_truth.unsqueeze(0)
-        truth_distance = F.mse_loss(predicted_next_state, z_target)
+        # Use Neuro-Chemical Core if available
+        if self.energy_fn:
+            serotonin = self.energy_fn.compute_serotonin(predicted_next_state, self.v_truth)
+            effective_boredom = self.energy_fn.compute_boredom(current_state, predicted_next_state, serotonin)
+
+            # Planner minimizes "Energy" (Cost).
+            # Reward = Serotonin - Boredom (Ignoring Dopamine for single-step lookahead)
+            # Cost = -Reward = Boredom - Serotonin
+            # Add Truth Distance as a proxy for "Base Energy" if Serotonin is just a bonus?
+            # Serotonin IS based on Truth Distance (1/dist).
+            # So maximizing Serotonin IS minimizing Truth Distance.
+            # So we can just use Cost = effective_boredom - serotonin.
+            # But Serotonin is small (0-100), Boredom can be huge.
+            # Let's match main_system logic: Total Reward = Sero - Bore.
+            # Cost = Bore - Sero.
+            estimated_energy = effective_boredom - serotonin
+        else:
+            # Fallback (should not happen with correct init)
+            z_target = self.v_truth.unsqueeze(0)
+            truth_distance = F.mse_loss(predicted_next_state, z_target) * 10.0
+            state_change = F.mse_loss(current_state, predicted_next_state)
+            boredom_penalty = 1.0 / (state_change + 1e-6) * 0.01
+            estimated_energy = truth_distance + boredom_penalty
         
-        return predicted_next_state, truth_distance.item()
+        if isinstance(estimated_energy, torch.Tensor):
+            estimated_energy = estimated_energy.item()
+
+        return predicted_next_state, estimated_energy

@@ -26,13 +26,14 @@ class GNNObjectExtractor(nn.Module):
         self.max_objects = max_objects
         self.feature_dim = feature_dim
 
-    def forward(self, grid: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, grid: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, int]:
         """
         Parses a 2D grid into a graph.
         Input: grid (H, W) - Integer tensor where values represent categories/colors. 0 is background.
         Output:
             - node_features: (B, N, D)
             - adjacency: (B, N, N)
+            - num_objects: Actual number of objects found (before padding)
         """
         # Handle batch dimension
         if grid.dim() == 2:
@@ -43,10 +44,12 @@ class GNNObjectExtractor(nn.Module):
         
         batch_nodes = []
         batch_adj = []
+        total_objects = 0
 
         for b in range(B):
             img = grid[b].cpu().numpy()
             nodes = self._extract_objects_dfs(img)
+            total_objects = len(nodes)
             
             # Pad or truncate to max_objects
             num_nodes = len(nodes)
@@ -87,7 +90,7 @@ class GNNObjectExtractor(nn.Module):
             batch_nodes.append(features)
             batch_adj.append(adj)
             
-        return torch.stack(batch_nodes), torch.stack(batch_adj)
+        return torch.stack(batch_nodes), torch.stack(batch_adj), total_objects
 
     def _extract_objects_dfs(self, grid: np.ndarray) -> List[ObjectNode]:
         """

@@ -49,9 +49,9 @@ class AdvancedAgent:
         self.world = InternalSandbox()
         
         # 3. Mind (System 2)
-        self.imagination = LatentWorldModel(self.predictor, self.v_truth)
+        self.imagination = LatentWorldModel(self.predictor, self.v_truth, self.energy_fn)
         self.planner = TreeSearchPlanner(self.imagination, self.action_decoder, depth=2, num_actions=6)
-        self.meta_cognition = MetaCognitiveController(entropy_threshold=1.2, variance_threshold=0.005)
+        self.meta_cognition = MetaCognitiveController(entropy_threshold=2.0, variance_threshold=0.005)
         
         # Optimizer
         self.optimizer = torch.optim.Adam(
@@ -65,6 +65,10 @@ class AdvancedAgent:
         self.action_history = []
         self.system2_usage = 0
 
+        # Neuro-Chemical State
+        self.prev_z = None
+        self.prev_energy = None
+
     def run_cycle(self, step: int):
         print(f"\n{'='*60}")
         print(f"Cycle {step}")
@@ -74,12 +78,13 @@ class AdvancedAgent:
         if 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
-            node_features, adjacency = self.vision(grid_tensor)
-            print(f"[Perceive] Observed {node_features.shape[1]} objects")
+            node_features, adjacency, num_objects = self.vision(grid_tensor)
+            print(f"[Perceive] Observed {num_objects} objects")
         else:
             node_features = torch.zeros(1, 5, 4)
             adjacency = torch.eye(5).unsqueeze(0)
-            print("[Perceive] Initial empty state")
+            num_objects = 0
+            print("[Perceive] Observed 0 objects (Empty Void)")
             
         # --- B. THINK (Brain Process) ---
         input_state = torch.nn.functional.pad(node_features, (0, 28))
@@ -122,10 +127,11 @@ class AdvancedAgent:
         if success and 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
-            next_node_features, next_adjacency = self.vision(grid_tensor)
+            next_node_features, next_adjacency, next_num_objects = self.vision(grid_tensor)
         else:
             next_node_features = torch.zeros(1, 5, 4)
             next_adjacency = torch.eye(5).unsqueeze(0)
+            next_num_objects = 0
             
         # --- G. LEARN (Update Models) ---
         # 1. Prepare Tensors
@@ -144,21 +150,37 @@ class AdvancedAgent:
         z_pred = self.predictor(z_t, action_embedding)
         
         pred_error = F.mse_loss(z_pred, z_t1)
-        truth_distance = F.mse_loss(z_t1, z_target)
+        truth_distance = F.mse_loss(z_t1, z_target) * 10.0 # Reinforce Truth Drive
+
+        # Base Energy (Pain) for Predictor
+        current_energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0
+
+        # --- Neuro-Chemical Core ---
+        # 1. Dopamine (Change in Energy)
+        dopamine = self.energy_fn.compute_dopamine(self.prev_energy, current_energy.item())
+
+        # 2. Serotonin (Truth Alignment)
+        serotonin = self.energy_fn.compute_serotonin(z_t1, z_target)
         
-        energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0
+        # 3. Boredom (Engine + Brake)
+        effective_boredom = self.energy_fn.compute_boredom(z_t, z_t1, serotonin)
         
-        # Update Meta-Cognition History
-        self.meta_cognition.update_energy(energy.item())
+        # 4. Total Reward
+        total_reward = dopamine + serotonin - effective_boredom
         
-        # 3. Policy Loss (REINFORCE)
+        # Update State
+        self.prev_energy = current_energy.item()
+        self.prev_z = z_t.detach()
+
+        # Update Meta-Cognition History (Use Base Energy or Reward? Energy implies stability)
+        self.meta_cognition.update_energy(current_energy.item())
+
+        # 3. Policy Loss (REINFORCE) -> Maximize Reward
         log_probs = F.log_softmax(action_logits, dim=-1)
         selected_log_prob = log_probs[0, action_id]
         
-        # If System 2 was used, we treat its choice as a "Teacher" for System 1?
-        # Or just standard REINFORCE based on result?
-        # Let's use standard REINFORCE: Minimize Energy.
-        policy_loss = selected_log_prob * energy.detach()
+        # Minimize Negative Reward
+        policy_loss = selected_log_prob * (-total_reward)
         
         # Entropy Bonus (to prevent collapse)
         entropy_bonus = -0.01 * entropy
@@ -166,12 +188,19 @@ class AdvancedAgent:
         # EWC
         ewc = self.brain.ewc_loss()
         
-        total_loss = energy + ewc - policy_loss + entropy_bonus
+        # Total Loss: Predictor minimizes Energy, Policy maximizes Reward
+        total_loss = current_energy + ewc + policy_loss + entropy_bonus
         
-        print(f"[Heart] Energy: {energy.item():.4f} (PredErr: {pred_error.item():.4f})")
+        print(f"[Heart] Energy: {current_energy.item():.4f} | Reward: {total_reward:.4f} (Dopa: {dopamine:.4f}, Sero: {serotonin:.4f}, Bore: {effective_boredom:.4f})")
         
         self.optimizer.zero_grad()
         total_loss.backward()
+
+        # Gradient Clipping to prevent explosion from Neuro-Chemical spikes
+        torch.nn.utils.clip_grad_norm_(list(self.brain.parameters()) +
+                                       list(self.action_decoder.parameters()) +
+                                       list(self.predictor.parameters()), 1.0)
+
         self.optimizer.step()
         
         # Intrinsic Crystallization (Same as V3.5.2)
@@ -185,12 +214,12 @@ def main():
     
     agent = AdvancedAgent()
     
-    for i in range(30):
+    for i in range(300):
         agent.run_cycle(i)
         
     print("\n" + "="*60)
     print("SIMULATION COMPLETE")
-    print(f"System 2 Usage: {agent.system2_usage}/30 cycles")
+    print(f"System 2 Usage: {agent.system2_usage}/300 cycles")
     print("="*60)
 
 if __name__ == "__main__":

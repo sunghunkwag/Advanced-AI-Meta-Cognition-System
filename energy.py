@@ -9,6 +9,7 @@ Energy Function: E = Prediction Error + Logical Violation.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class JEPA_Predictor(nn.Module):
     """
@@ -62,3 +63,46 @@ class EnergyFunction(nn.Module):
         total_energy = pred_error + violation_energy
         
         return total_energy.mean()
+
+    # =========================================================================
+    # NEURO-CHEMICAL CORE (Dopamine & Serotonin)
+    # =========================================================================
+
+    def compute_dopamine(self, prev_energy: float, current_energy: float) -> float:
+        """
+        Dopamine: The Drive.
+        Reward based on rate of energy decrease.
+        """
+        if prev_energy is None:
+            return 0.0
+        return max(0.0, prev_energy - current_energy)
+
+    def compute_serotonin(self, z_t: torch.Tensor, v_truth: torch.Tensor) -> float:
+        """
+        Serotonin: The Peace.
+        Reward based on closeness to Truth.
+        """
+        # Ensure v_truth has batch dim if needed, or broadcast
+        if v_truth.dim() == 1:
+            target = v_truth.unsqueeze(0)
+        else:
+            target = v_truth
+
+        dist = F.mse_loss(z_t, target)
+        return 1.0 / (dist.item() + 1e-4)
+
+    def compute_boredom(self, z_t: torch.Tensor, z_t1: torch.Tensor, serotonin: float) -> float:
+        """
+        Boredom: The Engine.
+        Regulated by Serotonin Brake.
+        """
+        # Raw Boredom: Punish lack of state change
+        state_change = F.mse_loss(z_t, z_t1).item()
+        raw_boredom = 1.0 / (state_change + 1e-6) * 0.01 # Scaling factor from previous logic
+
+        # Serotonin Brake
+        # High Serotonin -> High Tanh -> Low Brake Factor -> Low Boredom
+        brake = 1.0 - math.tanh(serotonin)
+
+        effective_boredom = raw_boredom * brake
+        return effective_boredom
