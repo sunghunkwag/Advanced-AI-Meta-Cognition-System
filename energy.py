@@ -40,7 +40,7 @@ class NeuroChemicalEngine:
             if variance < 0.01:
                 is_stable = True
         
-        if is_stable and consistency_score > 0.8:
+        if is_stable and consistency_score > 0.8 and current_energy < 0.2:
             self.serotonin += 0.1
         else:
             self.serotonin *= 0.98 # Decay if chaotic

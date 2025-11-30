@@ -29,6 +29,7 @@ The system is built upon four distinct but interconnected modules, mirroring bio
     *   **🔥 Dopamine (The Drive):** Spikes when energy (error) drops rapidly. Drives exploration and chaos.
     *   **💧 Serotonin (The Peace):** Rises when the system is stable and consistent with Truth. Promotes order and crystallization.
     *   **JEPA Predictor:** Allows the system to "imagine" the future (System 2) by predicting the next state given an action.
+    *   **Boredom Penalty:** The system now feels "pain" (High Energy) when the world is empty, driving it to create.
 
 ### 4. The Soul: Intrinsic Crystallization (`automata.py`)
 *   **Goal:** Enlightenment & Knowledge Preservation.
@@ -61,14 +62,15 @@ python main_system.py
 ```
 
 ### Expected Output
-You will see the agent evolve through its life cycle, occasionally triggering System 2 when confused:
+You will see the agent evolve through its life cycle, starting with "Boredom" (High Energy) and moving towards "Creation" and "Order":
 
 ```text
-Step 05 | Mode: CHAOS | Dopa: 0.85 Sero: 0.50 | Energy: 0.1200 | Action: DRAW
+Step 01 | Mode: CHAOS | Dopa: 1.00 Sero: 0.49 | Energy: 0.5000 | Action: CLEAR
+...
+Step 05 | Mode: CHAOS | Dopa: 0.85 Sero: 0.50 | Energy: 0.3000 | Action: DRAW
 🛑 [System 2 Triggered] High Uncertainty (Entropy 1.82 > 1.50)
 [System 2] Deliberating (Depth 2)...
    -> 🧠 Plan: [1]->[0]
-Step 06 | Mode: CHAOS | Dopa: 0.82 Sero: 0.50 | Energy: 0.1100 | Action: SYMMETRIZE
 ...
        -> 🧘 Nirvana Reached. Mind is Still.
 ```

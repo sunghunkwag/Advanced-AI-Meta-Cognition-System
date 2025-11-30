@@ -45,6 +45,8 @@ class World:
 
         return self.grid
 
+        return sym_diff
+
     def calculate_energy(self):
         """
         Calculate the 'Energy' of the world.
@@ -53,7 +55,11 @@ class World:
         # 1. Symmetry Energy (Lower is better)
         sym_diff = np.abs(self.grid - np.fliplr(self.grid)).mean()
         
-        # 2. Entropy (Sparseness is preferred?)
-        # Let's say we want a specific pattern, but for now, symmetry is the goal.
+        # 2. Entropy/Boredom Penalty
+        # If the world is empty, Energy should be high.
+        # Target density: 10% filled.
+        density = self.grid.mean()
+        target_density = 0.1
+        density_penalty = abs(target_density - density) * 5.0
         
-        return sym_diff
+        return sym_diff + density_penalty

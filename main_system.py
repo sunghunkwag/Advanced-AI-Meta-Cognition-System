@@ -135,7 +135,7 @@ def main():
             print(f"       -> 🧘 Nirvana Reached. Mind is Still.")
             break
             
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     print("-" * 50)
     print("🏁 Simulation Complete.")
