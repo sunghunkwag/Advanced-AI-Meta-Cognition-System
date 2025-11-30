@@ -17,7 +17,7 @@ class World:
         Apply the action from the Body to the World.
         """
         act_type = action_dict['type']
-        x, y = action_dict['x'], action_dict['y'] # [-1, 1]
+        x, y = action_dict['x'], action_dict['y']  # [-1, 1]
         
         # Denormalize coordinates
         c = int((x + 1) / 2 * (self.size - 1))
@@ -28,16 +28,27 @@ class World:
         r = np.clip(r, 0, self.size - 1)
 
         if act_type == "DRAW":
-            self.grid[r, c] = 1.0 # Draw a point
-            # Draw a small 3x3 block for visibility
-            self.grid[max(0, r-1):min(self.size, r+2), max(0, c-1):min(self.size, c+2)] = 0.8
+            # Reduced intensity for better control
+            self.grid[r, c] = min(1.0, self.grid[r, c] + 0.5)
+            # Draw a small 2x2 block for visibility
+            for dr in [-1, 0, 1]:
+                for dc in [-1, 0, 1]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < self.size and 0 <= nc < self.size:
+                        self.grid[nr, nc] = min(1.0, self.grid[nr, nc] + 0.3)
             
         elif act_type == "CLEAR":
-            self.grid.fill(0)
+            # Clear specific region instead of entire grid
+            radius = 2
+            for dr in range(-radius, radius+1):
+                for dc in range(-radius, radius+1):
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < self.size and 0 <= nc < self.size:
+                        self.grid[nr, nc] = max(0, self.grid[nr, nc] - 0.4)
             
         elif act_type == "NOISE":
             noise = np.random.rand(self.size, self.size) * 0.1
-            self.grid += noise
+            self.grid = np.clip(self.grid + noise, 0, 1)
             
         elif act_type == "SYMMETRIZE":
             # Simple horizontal symmetry
@@ -45,20 +56,25 @@ class World:
 
         return self.grid
 
-
     def calculate_energy(self):
         """
         Calculate the 'Energy' of the world.
         Lower energy = More ordered/symmetrical/clean.
+        
+        NOTE: This returns a Python float (not differentiable).
+        For gradient-based learning, use REINFORCE algorithm.
         """
         # 1. Symmetry Energy (Lower is better)
-        sym_diff = np.abs(self.grid - np.fliplr(self.grid)).mean()
+        sym_diff = np.abs(self.grid - np.fliplr(self.grid)).sum()
         
-        # 2. Entropy/Boredom Penalty
-        # If the world is empty, Energy should be high.
+        # 2. Density Penalty
         # Target density: 10% filled.
-        density = self.grid.mean()
+        density = self.grid.sum() / (self.size ** 2)
         target_density = 0.1
-        density_penalty = abs(target_density - density) * 5.0
+        density_penalty = abs(target_density - density) * 20.0
         
-        return sym_diff + density_penalty
+        # 3. Over-saturation penalty
+        if density > 0.5:
+            density_penalty += (density - 0.5) ** 2 * 50
+        
+        return float(sym_diff + density_penalty)

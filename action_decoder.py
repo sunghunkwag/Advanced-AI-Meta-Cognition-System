@@ -35,18 +35,21 @@ class ActionDecoder(nn.Module):
         action_logits = self.action_head(x)
         
         # Head 2
-        params = torch.tanh(self.param_head(x)) # Bound to [-1, 1]
+        params = torch.tanh(self.param_head(x))  # Bound to [-1, 1]
         
         return action_logits, params
 
     def decode_action(self, action_logits, params):
         """
         Interprets the network output into a usable command.
+        
+        CRITICAL FIX: Added .cpu() for GPU compatibility
         """
         action_idx = torch.argmax(action_logits).item()
         
         # Unpack parameters
-        x, y, p3, p4 = params.detach().numpy().flatten()
+        # FIX: Move to CPU first if on CUDA
+        x, y, p3, p4 = params.detach().cpu().numpy().flatten()
         
         # Map to action types
         action_type = ["DRAW", "SYMMETRIZE", "CLEAR", "NOISE"][action_idx]
@@ -55,6 +58,29 @@ class ActionDecoder(nn.Module):
             "type": action_type,
             "x": x,
             "y": y,
-            "p3": p3, # Scale or Axis
-            "p4": p4  # Extra param
+            "p3": p3,  # Scale or Axis
+            "p4": p4   # Extra param
         }
+    
+    def sample_action(self, action_logits, params, temperature=1.0):
+        """
+        Sample action using categorical distribution (for REINFORCE).
+        Returns action dict and log probability.
+        """
+        # Sample action with temperature
+        action_probs = F.softmax(action_logits / temperature, dim=-1)
+        action_dist = torch.distributions.Categorical(action_probs)
+        action_idx = action_dist.sample()
+        log_prob = action_dist.log_prob(action_idx)
+        
+        # Get parameters
+        x, y, p3, p4 = params.detach().cpu().numpy().flatten()
+        action_type = ["DRAW", "SYMMETRIZE", "CLEAR", "NOISE"][action_idx.item()]
+        
+        return {
+            "type": action_type,
+            "x": x,
+            "y": y,
+            "p3": p3,
+            "p4": p4
+        }, log_prob
