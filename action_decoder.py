@@ -46,7 +46,7 @@ class ActionDecoder(nn.Module):
         action_idx = torch.argmax(action_logits).item()
         
         # Unpack parameters
-        x, y, p3, p4 = params.detach().numpy()
+        x, y, p3, p4 = params.detach().numpy().flatten()
         
         # Map to action types
         action_type = ["DRAW", "SYMMETRIZE", "CLEAR", "NOISE"][action_idx]

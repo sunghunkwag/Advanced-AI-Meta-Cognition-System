@@ -1,7 +1,7 @@
 """
-Soul Encoder & Preprocessing Module (V3.5 - Logical Body)
+Soul Encoder & Preprocessing Module (Advanced AI System Core)
 
-This module implements the "Soul Injection" logic for Project Daedalus V3.5.
+This module implements the "Soul Injection" logic for the Advanced AI System.
 It converts the raw "Cognitive DNA" of the user (keywords) into mathematical vectors
 that define the initial geometry and energy landscape of the Logical Manifold.
 

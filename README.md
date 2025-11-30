@@ -28,12 +28,22 @@ The system is built upon four distinct but interconnected modules, mirroring bio
 *   **Mechanism:** A Dual-Hormone System.
     *   **🔥 Dopamine (The Drive):** Spikes when energy (error) drops rapidly. Drives exploration and chaos.
     *   **💧 Serotonin (The Peace):** Rises when the system is stable and consistent with Truth. Promotes order and crystallization.
-*   **Dynamics:** The agent naturally transitions from a Dopamine-driven learner (Chaos) to a Serotonin-driven master (Order).
+    *   **JEPA Predictor:** Allows the system to "imagine" the future (System 2) by predicting the next state given an action.
 
 ### 4. The Soul: Intrinsic Crystallization (`automata.py`)
 *   **Goal:** Enlightenment & Knowledge Preservation.
 *   **Mechanism:** **Elastic Weight Consolidation (EWC)**.
 *   **Behavior:** When Serotonin levels peak and the mind is still, the system enters "Nirvana". It freezes its weights (Crystallization) to preserve the learned structure, resisting further entropy.
+
+---
+
+## System 2: Meta-Cognition & Planning
+
+The system now possesses a **Meta-Cognitive Controller** that arbitrates between two modes of thinking:
+
+*   **System 1 (Intuition):** Fast, reflexive actions driven by the `ActionDecoder`. Used when entropy is low and the environment is stable.
+*   **System 2 (Deliberation):** Slow, planned actions. Triggered by **High Entropy** (Confusion) or **Unstable Energy** (Panic).
+    *   **Mechanism:** The `TreeSearchPlanner` uses the `LatentWorldModel` (JEPA) to simulate future outcomes and select the action that minimizes predicted energy.
 
 ---
 
@@ -51,14 +61,14 @@ python main_system.py
 ```
 
 ### Expected Output
-You will see the agent evolve through its life cycle:
-1.  **Birth:** High entropy, random actions.
-2.  **Growth (Chaos):** High Dopamine spikes as it discovers patterns (e.g., Symmetry).
-3.  **Maturity (Order):** Serotonin rises as it perfects its actions.
-4.  **Nirvana:** The system crystallizes and stops learning.
+You will see the agent evolve through its life cycle, occasionally triggering System 2 when confused:
 
 ```text
-Step 01 | Mode: CHAOS | Dopa: 1.00 Sero: 0.49 | Energy: 0.0000 | Action: SYMMETRIZE
+Step 05 | Mode: CHAOS | Dopa: 0.85 Sero: 0.50 | Energy: 0.1200 | Action: DRAW
+🛑 [System 2 Triggered] High Uncertainty (Entropy 1.82 > 1.50)
+[System 2] Deliberating (Depth 2)...
+   -> 🧠 Plan: [1]->[0]
+Step 06 | Mode: CHAOS | Dopa: 0.82 Sero: 0.50 | Energy: 0.1100 | Action: SYMMETRIZE
 ...
        -> 🧘 Nirvana Reached. Mind is Still.
 ```

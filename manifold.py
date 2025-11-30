@@ -46,7 +46,7 @@ class GraphAttentionManifold(nn.Module):
     The Mind.
     Uses Graph Attention Networks (GAT) to reason about relationships.
     """
-    def __init__(self, nfeat, nhid, nclass, dropout=0.6, alpha=0.2, nheads=2):
+    def __init__(self, nfeat, nhid, nclass, dropout=0.6, alpha=0.2, nheads=2, truth_vector=None):
         super(GraphAttentionManifold, self).__init__()
         self.dropout = dropout
 
@@ -58,7 +58,10 @@ class GraphAttentionManifold(nn.Module):
         
         # Axiom Injection: Truth Vector
         # This represents the "ideal" logical state or consistency check
-        self.truth_vector = nn.Parameter(torch.randn(nclass))
+        if truth_vector is not None:
+            self.truth_vector = nn.Parameter(truth_vector)
+        else:
+            self.truth_vector = nn.Parameter(torch.randn(nclass))
 
     def forward(self, x, adj):
         x = F.dropout(x, self.dropout, training=self.training)
@@ -67,7 +70,7 @@ class GraphAttentionManifold(nn.Module):
         x = F.elu(self.out_att(x, adj))
         
         # Latent State Representation (z)
-        z = torch.mean(x, dim=0) # Global pooling
+        z = torch.mean(x, dim=0, keepdim=True) # Global pooling -> (1, D)
         return z
 
     def check_consistency(self, z):
@@ -75,5 +78,8 @@ class GraphAttentionManifold(nn.Module):
         Compare current thought (z) with Axiom (Truth).
         Returns a consistency score (0 to 1).
         """
-        similarity = F.cosine_similarity(z.unsqueeze(0), self.truth_vector.unsqueeze(0))
+        # z: (1, D)
+        # truth_vector: (D) -> (1, D)
+        target = self.truth_vector.unsqueeze(0)
+        similarity = F.cosine_similarity(z, target, dim=1)
         return (similarity + 1) / 2  # Normalize to [0, 1]
