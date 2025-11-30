@@ -1,134 +1,60 @@
-"""
-Action Decoder Module (V3.5 - True Autonomy)
-
-Translates abstract brain outputs (vectors) into concrete Python code.
-This is the bridge between "Thought" and "Action".
-"""
-
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class ActionDecoder(nn.Module):
     """
-    Converts brain state into discrete action primitives.
-    The agent learns which actions minimize energy.
+    The Body.
+    Decodes latent thoughts into concrete actions in physical space.
+    NO HARDCODED TEMPLATES.
     """
-    def __init__(self, state_dim: int, num_actions: int = 6):
-        super().__init__()
-        self.num_actions = num_actions
+    def __init__(self, latent_dim, output_dim=4):
+        super(ActionDecoder, self).__init__()
+        self.latent_dim = latent_dim
         
-        # Brain output -> Action logits
-        self.policy_head = nn.Sequential(
-            nn.Linear(state_dim, state_dim),
-            nn.SiLU(),
-            nn.Linear(state_dim, num_actions)
-        )
-        
-        # Action primitives (Code templates)
-        self.action_primitives = {
-            0: self._action_do_nothing,
-            1: self._action_random_noise,
-            2: self._action_draw_square,
-            3: self._action_symmetrize,
-            4: self._action_clear,
-            5: self._action_draw_pair
-        }
-        
-    def forward(self, brain_state: torch.Tensor) -> torch.Tensor:
-        """
-        brain_state: (B, D) - Global state from the brain
-        Returns: action_logits (B, num_actions)
-        """
-        logits = self.policy_head(brain_state)
-        return logits
-    
-    def sample_action(self, logits: torch.Tensor, deterministic: bool = False) -> int:
-        """
-        Sample an action ID from the logits.
-        """
-        if deterministic:
-            action_id = torch.argmax(logits, dim=-1).item()
-        else:
-            # Stochastic sampling (exploration)
-            probs = torch.softmax(logits, dim=-1)
-            action_id = torch.multinomial(probs, num_samples=1).item()
-        
-        return action_id
-    
-    def get_action_code(self, action_id: int, grid_shape: tuple = (10, 10)) -> str:
-        """
-        Convert action ID to executable Python code.
-        """
-        if action_id in self.action_primitives:
-            return self.action_primitives[action_id](grid_shape)
-        else:
-            return self._action_do_nothing(grid_shape)
-    
-    # ===== Action Primitives =====
-    
-    def _action_do_nothing(self, grid_shape):
-        return """
-import numpy as np
-grid = np.zeros({}, dtype=int)
-print("Action: Do Nothing")
-""".format(grid_shape)
-    
-    def _action_random_noise(self, grid_shape):
-        return """
-import numpy as np
-grid = np.random.randint(0, 2, {})
-print("Action: Random Noise")
-""".format(grid_shape)
-    
-    def _action_draw_square(self, grid_shape):
-        h, w = grid_shape
-        x, y = h // 4, w // 4
-        size = min(h, w) // 3
-        return """
-import numpy as np
-grid = np.zeros({}, dtype=int)
-grid[{}:{}, {}:{}] = 1
-print("Action: Draw Square")
-""".format(grid_shape, x, x+size, y, y+size)
-    
-    def _action_symmetrize(self, grid_shape):
-        return """
-import numpy as np
-grid = np.random.randint(0, 2, {})
-# Create symmetry (Truth-aligned behavior)
-grid = (grid + grid.T) // 2
-print("Action: Symmetrize")
-""".format(grid_shape)
-    
-    def _action_clear(self, grid_shape):
-        return """
-import numpy as np
-grid = np.zeros({}, dtype=int)
-print("Action: Clear")
-""".format(grid_shape)
-    
-    def _action_draw_pair(self, grid_shape):
-        h, w = grid_shape
-        x, y = h // 4, w // 4
-        size = min(h, w) // 4
-        return """
-import numpy as np
-grid = np.zeros({}, dtype=int)
-grid[{}:{}, {}:{}] = 1  # Left Square
-grid[{}:{}, {}:{}] = 1  # Right Square (Symmetry)
-print("Action: Draw Symmetric Pair")
-""".format(grid_shape, x, x+size, y, y+size, x, x+size, w-y-size, w-y)
+        # Shared trunk
+        self.fc1 = nn.Linear(latent_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
 
-    def get_action_name(self, action_id: int) -> str:
+        # Head 1: Action Logits (What to do)
+        # 0: Draw, 1: Symmetrize, 2: Clear, 3: Noise
+        self.action_head = nn.Linear(64, 4)
+
+        # Head 2: Action Parameters (Where/How)
+        # [x, y, scale, axis/variant]
+        # x, y: [-1, 1]
+        # scale: [0, 1]
+        # axis: Continuous value to be discretized or used as is
+        self.param_head = nn.Linear(64, 4)
+
+    def forward(self, z):
+        x = F.relu(self.fc1(z))
+        x = F.relu(self.fc2(x))
+
+        # Head 1
+        action_logits = self.action_head(x)
+        
+        # Head 2
+        params = torch.tanh(self.param_head(x)) # Bound to [-1, 1]
+        
+        return action_logits, params
+
+    def decode_action(self, action_logits, params):
         """
-        Get human-readable action name.
+        Interprets the network output into a usable command.
         """
-        names = {
-            0: "Do Nothing",
-            1: "Random Noise",
-            2: "Draw Square",
-            3: "Symmetrize",
-            4: "Clear",
-            5: "Draw Pair"
+        action_idx = torch.argmax(action_logits).item()
+        
+        # Unpack parameters
+        x, y, p3, p4 = params.detach().numpy()
+        
+        # Map to action types
+        action_type = ["DRAW", "SYMMETRIZE", "CLEAR", "NOISE"][action_idx]
+        
+        return {
+            "type": action_type,
+            "x": x,
+            "y": y,
+            "p3": p3, # Scale or Axis
+            "p4": p4  # Extra param
         }
-        return names.get(action_id, "Unknown")
