@@ -134,8 +134,14 @@ def test_gat_network():
     )
     
     # Create mock input
-    nodes = torch.randn(1, num_nodes, nfeat)
-    adj = torch.eye(num_nodes).unsqueeze(0)  # Identity adjacency
+    # nodes must be (N, nfeat) for single graph or handled correctly by GAT.
+    # The error "self must be a matrix" usually implies 3D input to torch.mm.
+    # Original test had nodes = torch.randn(1, num_nodes, nfeat) which is (B, N, F).
+    # GAT implementation does torch.mm(h, self.W), expecting h to be (N, F).
+    # So we should remove the batch dimension for this specific test setup or the GAT expects no batch.
+
+    nodes = torch.randn(num_nodes, nfeat)
+    adj = torch.eye(num_nodes) # Identity adjacency (N, N)
     
     # Forward pass
     z = gat(nodes, adj)
