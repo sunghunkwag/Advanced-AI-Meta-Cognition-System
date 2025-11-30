@@ -5,7 +5,7 @@ and experimental parameters.
 """
 
 import torch
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -72,11 +72,11 @@ class CrystallizationConfig:
 @dataclass
 class SystemConfig:
     """Complete system configuration."""
-    world: WorldConfig = WorldConfig()
-    architecture: ArchitectureConfig = ArchitectureConfig()
-    training: TrainingConfig = TrainingConfig()
-    neurochemical: NeuroChemicalConfig = NeuroChemicalConfig()
-    crystallization: CrystallizationConfig = CrystallizationConfig()
+    world: WorldConfig = field(default_factory=WorldConfig)
+    architecture: ArchitectureConfig = field(default_factory=ArchitectureConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
+    neurochemical: NeuroChemicalConfig = field(default_factory=NeuroChemicalConfig)
+    crystallization: CrystallizationConfig = field(default_factory=CrystallizationConfig)
     
     # Logging
     log_interval: int = 1
