@@ -152,8 +152,11 @@ class AdvancedAgent:
         pred_error = F.mse_loss(z_pred, z_t1)
         truth_distance = F.mse_loss(z_t1, z_target) * 10.0 # Reinforce Truth Drive
 
+        # Void Penalty (Punish empty world to prevent "False Nirvana")
+        void_penalty = 10.0 if next_num_objects == 0 else 0.0
+
         # Base Energy (Pain) for Predictor
-        current_energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0
+        current_energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0 + void_penalty
 
         # --- Neuro-Chemical Core ---
         # 1. Dopamine (Change in Energy)
@@ -166,8 +169,9 @@ class AdvancedAgent:
         effective_boredom = self.energy_fn.compute_boredom(z_t, z_t1, serotonin)
         
         # 4. Total Reward
-        total_reward = dopamine + serotonin - effective_boredom
-        
+        # Subtract Void Penalty to ensure "Empty" is never a reward state
+        total_reward = dopamine + serotonin - effective_boredom - void_penalty
+
         # Update State
         self.prev_energy = current_energy.item()
         self.prev_z = z_t.detach()
