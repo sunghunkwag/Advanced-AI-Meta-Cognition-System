@@ -1,6 +1,8 @@
 """Enhanced main system with configuration management and improved logging.
 
 Integrates config.py and logger.py for better experimental control.
+
+CRITICAL FIX: Now uses REINFORCE algorithm for proper gradient flow.
 """
 
 import torch
@@ -39,6 +41,7 @@ class AdvancedAISystem:
     def __init__(self, config: SystemConfig):
         self.config = config
         self.logger = SystemLogger(verbose=config.verbose)
+        self.device = torch.device(config.device)
         
         # Set seed if specified
         if config.seed is not None:
@@ -83,10 +86,9 @@ class AdvancedAISystem:
         )
         
         # Move to device
-        device = torch.device(config.device)
-        self.mind.to(device)
-        self.body.to(device)
-        self.jepa.to(device)
+        self.mind.to(self.device)
+        self.body.to(self.device)
+        self.jepa.to(self.device)
         
     def run_step(self, step: int) -> StepMetrics:
         """Execute a single step of the system.
@@ -99,22 +101,12 @@ class AdvancedAISystem:
         # === PERCEPTION ===
         world_state = self.world.get_state()
         nodes, adj = self.vision.perceive(world_state)
+        nodes = nodes.to(self.device)
+        adj = adj.to(self.device)
         
         # === MIND (Reasoning) ===
         z = self.mind(nodes, adj)
         consistency = self.mind.check_consistency(z)
-        
-        # === CALCULATE ENERGY ===
-        world_energy = self.world.calculate_energy()
-        
-        # === HEART (Emotions) ===
-        self.heart.update(world_energy, consistency.item())
-        dopamine, serotonin = self.heart.get_hormones()
-        state_mode = self.heart.get_state()
-        
-        # === SOUL (Crystallization Check) ===
-        self.soul.update_state((dopamine, serotonin))
-        ewc_loss = self.soul.ewc_loss(self.mind)
         
         # === BODY (Action Selection) ===
         action_logits, params = self.body(z)
@@ -128,16 +120,41 @@ class AdvancedAISystem:
                 action_logits = torch.zeros_like(action_logits)
                 action_logits[0, 0] = 10.0
         
-        action = self.body.decode_action(action_logits, params)
+        # CRITICAL FIX: Sample action with log probability for REINFORCE
+        action, log_prob = self.body.sample_action(action_logits, params)
         
         # === ACT ON WORLD ===
         self.world.apply_action(action)
         
-        # === LEARNING ===
-        loss = (config.training.energy_weight * torch.tensor(world_energy, dtype=torch.float32) +
-                config.training.consistency_weight * (1.0 - consistency) +
+        # === CALCULATE ENERGY (Reward) ===
+        world_energy = self.world.calculate_energy()
+        
+        # === HEART (Emotions) ===
+        self.heart.update(world_energy, consistency.item())
+        dopamine, serotonin = self.heart.get_hormones()
+        state_mode = self.heart.get_state()
+        
+        # === SOUL (Crystallization Check) ===
+        self.soul.update_state((dopamine, serotonin))
+        ewc_loss = self.soul.ewc_loss(self.mind)
+        
+        # === REINFORCE LOSS ===
+        # CRITICAL FIX: Use policy gradient instead of broken gradient flow
+        # Reward is negative energy (lower energy = higher reward)
+        reward = -world_energy
+        
+        # Policy gradient: -log_prob * reward
+        policy_loss = -log_prob * reward
+        
+        # Consistency loss
+        consistency_loss = config.training.consistency_weight * (1.0 - consistency)
+        
+        # Total loss
+        loss = (policy_loss + 
+                consistency_loss + 
                 config.training.ewc_weight * ewc_loss)
         
+        # === LEARNING ===
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
@@ -208,7 +225,7 @@ class AdvancedAISystem:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Advanced AI Meta-Cognition System")
+    parser = argparse.ArgumentParser(description="Advanced AI Meta-Cognition System (FIXED)")
     parser.add_argument('--config', type=str, default='default',
                        choices=['default', 'experimental'],
                        help='Configuration preset to use')
