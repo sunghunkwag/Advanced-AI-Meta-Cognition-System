@@ -52,6 +52,13 @@ class LatentWorldModel(nn.Module):
         # We also assume no "Logical Violation" in imagination (optimistic).
         
         z_target = self.v_truth.unsqueeze(0)
-        truth_distance = F.mse_loss(predicted_next_state, z_target)
+        truth_distance = F.mse_loss(predicted_next_state, z_target) * 10.0 # Match weight in main_system.py
         
-        return predicted_next_state, truth_distance.item()
+        # Estimate Boredom Penalty (State Change)
+        # We want the agent to know that "No Change" = Pain
+        state_change = F.mse_loss(current_state, predicted_next_state)
+        boredom_penalty = 1.0 / (state_change + 1e-6) * 0.01
+
+        estimated_energy = truth_distance + boredom_penalty
+
+        return predicted_next_state, estimated_energy.item()

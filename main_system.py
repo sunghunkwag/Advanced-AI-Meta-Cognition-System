@@ -51,7 +51,7 @@ class AdvancedAgent:
         # 3. Mind (System 2)
         self.imagination = LatentWorldModel(self.predictor, self.v_truth)
         self.planner = TreeSearchPlanner(self.imagination, self.action_decoder, depth=2, num_actions=6)
-        self.meta_cognition = MetaCognitiveController(entropy_threshold=1.2, variance_threshold=0.005)
+        self.meta_cognition = MetaCognitiveController(entropy_threshold=2.0, variance_threshold=0.005)
         
         # Optimizer
         self.optimizer = torch.optim.Adam(
@@ -74,12 +74,13 @@ class AdvancedAgent:
         if 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
-            node_features, adjacency = self.vision(grid_tensor)
-            print(f"[Perceive] Observed {node_features.shape[1]} objects")
+            node_features, adjacency, num_objects = self.vision(grid_tensor)
+            print(f"[Perceive] Observed {num_objects} objects")
         else:
             node_features = torch.zeros(1, 5, 4)
             adjacency = torch.eye(5).unsqueeze(0)
-            print("[Perceive] Initial empty state")
+            num_objects = 0
+            print("[Perceive] Observed 0 objects (Empty Void)")
             
         # --- B. THINK (Brain Process) ---
         input_state = torch.nn.functional.pad(node_features, (0, 28))
@@ -122,10 +123,11 @@ class AdvancedAgent:
         if success and 'grid' in self.world.global_context:
             grid_np = self.world.global_context['grid']
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
-            next_node_features, next_adjacency = self.vision(grid_tensor)
+            next_node_features, next_adjacency, next_num_objects = self.vision(grid_tensor)
         else:
             next_node_features = torch.zeros(1, 5, 4)
             next_adjacency = torch.eye(5).unsqueeze(0)
+            next_num_objects = 0
             
         # --- G. LEARN (Update Models) ---
         # 1. Prepare Tensors
@@ -144,9 +146,18 @@ class AdvancedAgent:
         z_pred = self.predictor(z_t, action_embedding)
         
         pred_error = F.mse_loss(z_pred, z_t1)
-        truth_distance = F.mse_loss(z_t1, z_target)
+        truth_distance = F.mse_loss(z_t1, z_target) * 10.0 # Reinforce Truth Drive
         
-        energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0
+        # 1. Boredom Penalty (Punish lack of change)
+        state_change = F.mse_loss(z_t, z_t1)
+        boredom_penalty = 1.0 / (state_change + 1e-6) * 0.01
+
+        # 2. Void Penalty (Punish empty world)
+        void_penalty = 0.0
+        if next_num_objects == 0:
+            void_penalty = 10.0
+
+        energy = pred_error + truth_distance + violation_tensor.squeeze() * 100.0 + boredom_penalty + void_penalty
         
         # Update Meta-Cognition History
         self.meta_cognition.update_energy(energy.item())
@@ -185,12 +196,12 @@ def main():
     
     agent = AdvancedAgent()
     
-    for i in range(30):
+    for i in range(300):
         agent.run_cycle(i)
         
     print("\n" + "="*60)
     print("SIMULATION COMPLETE")
-    print(f"System 2 Usage: {agent.system2_usage}/30 cycles")
+    print(f"System 2 Usage: {agent.system2_usage}/300 cycles")
     print("="*60)
 
 if __name__ == "__main__":
