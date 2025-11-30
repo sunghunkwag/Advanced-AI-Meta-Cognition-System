@@ -107,7 +107,32 @@ def main():
             print(f"   -> 🧠 Plan: {plan_trace}")
         
         # F. Body (Action Execution)
-        action = body.decode_action(action_logits, params)
+        # Use sampling if in CHAOS mode, otherwise deterministic
+        is_chaos = (state_mode == "CHAOS")
+        # If System 2 overrode it, we likely want to be deterministic on that choice
+        if meta_mode == "SYSTEM_2":
+            is_chaos = False
+
+        action_id = body.sample_action(action_logits, deterministic=not is_chaos)
+
+        # We need to manually repackage for legacy apply_action format since decode_action was replaced/updated
+        # But wait, decode_action still exists in my update, just wraps _package_action
+        # But decode_action forces argmax.
+        # Let's use the helper _package_action but it's internal.
+        # Or just construct the dict here.
+
+        # Let's use the public helper I should have exposed or just access params directly.
+        # params is (1, 4).
+        p_vals = params.detach().cpu().numpy().flatten()
+        action_type_name = body.get_action_name(action_id)
+
+        action = {
+            "type": action_type_name,
+            "x": p_vals[0],
+            "y": p_vals[1],
+            "p3": p_vals[2],
+            "p4": p_vals[3]
+        }
         
         # G. Act on World
         world.apply_action(action)

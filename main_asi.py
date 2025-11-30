@@ -46,7 +46,7 @@ class ASIAgent:
         print("[System] Building Logical Body...")
         self.vision = GNNObjectExtractor(max_objects=5, feature_dim=4)
         self.brain = ManifoldAutomata(state_dim=32, num_heads=4, v_truth=self.v_truth)
-        self.action_decoder = ActionDecoder(state_dim=32, num_actions=6)
+        self.action_decoder = ActionDecoder(latent_dim=32, num_actions=6)
         self.predictor = JEPA_Predictor(state_dim=32, action_dim=32)
         self.energy_fn = EnergyFunction(lambda_violation=100.0)
         self.world = InternalSandbox()
@@ -87,12 +87,15 @@ class ASIAgent:
             print("[Perceive] Initial empty state")
         
         # B. THINK: Brain processes state -> Action logits
+        # Pad features to match state_dim (32). Current features are 4.
+        # Pad amount = 32 - 4 = 28.
         input_state = torch.nn.functional.pad(node_features, (0, 28))
         current_state = self.brain(input_state, adjacency, steps=3)
         z_t = current_state.mean(dim=1)
         
         # Get action logits
-        action_logits = self.action_decoder(z_t)
+        # ActionDecoder returns (logits, params), we only need logits here
+        action_logits, _ = self.action_decoder(z_t)
         
         # C. DECIDE: Entropy-driven exploration/exploitation
         # NO HARDCODED SCHEDULE!
@@ -157,6 +160,8 @@ class ASIAgent:
         
         # EWC Loss
         ewc = self.brain.ewc_loss()
+        if isinstance(ewc, int):
+            ewc = torch.tensor(ewc, dtype=torch.float32)
         
         # Policy loss with ENTROPY REGULARIZATION
         log_probs = F.log_softmax(action_logits, dim=-1)
