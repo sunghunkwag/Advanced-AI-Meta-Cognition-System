@@ -45,7 +45,6 @@ class World:
 
         return self.grid
 
-        return sym_diff
 
     def calculate_energy(self):
         """

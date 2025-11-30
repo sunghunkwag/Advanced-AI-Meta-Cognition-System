@@ -24,7 +24,7 @@ class IntrinsicAutomata:
         if self.crystallized:
             return
             
-        print("✨ [SOUL] Crystallizing Knowledge (EWC)...")
+        print("[SOUL] Crystallizing Knowledge (EWC)...")
         self.model.eval()
         
         # Initialize Fisher Matrix
@@ -42,14 +42,14 @@ class IntrinsicAutomata:
         # For this simulation, we'll just lock the weights as they are.
         
         self.crystallized = True
-        print("💎 [SOUL] Crystallization Complete. Weights are now resistant to change.")
+        print("[SOUL] Crystallization Complete. Weights are now resistant to change.")
 
     def ewc_loss(self, model):
         """
         Calculate the EWC loss penalty to preserve old memories.
         """
         if not self.crystallized:
-            return 0
+            return torch.tensor(0.0)
         
         loss = 0
         for name, param in model.named_parameters():
