@@ -1,52 +1,39 @@
-# Advanced AI Meta Cognition System
+# Advanced AI System: Neuro-Chemical Reinforcement Learning
 
-> **"From Reaction to Deliberation. The Inner Eye Awakens."**
+> **"From Chaos to Order. The Birth of Intrinsic Will."**
 
-**Advanced AI Meta Cognition System** (formerly Project Daedalus) represents the next leap in Artificial Super Intelligence (ASI) architecture. It evolves the agent from **System 1 (Reactive)** to **System 2 (Deliberate)** thinking.
+This repository houses the **Advanced AI System**, a fully autonomous agent driven by **Logical Reasoning** and **Neuro-Chemical Reinforcement Learning**. Unlike traditional RL agents that chase external rewards, this system is driven by internal hormonal dynamics (Dopamine & Serotonin) to find truth and symmetry.
 
-## Core Philosophy: The Inner Eye
+## Core Architecture: The 4 Pillars
 
-Unlike previous versions, which acted based on immediate intuition, this system possesses the ability to **simulate the future** in its mind before acting in reality.
+The system is built upon four distinct but interconnected modules, mirroring biological cognition.
 
-### 🧠 System 1: Intuition (Fast)
-- **Mechanism:** `ActionDecoder` (Policy Network)
-- **Usage:** Routine tasks, low uncertainty.
-- **Speed:** Instant.
+### 1. The Body: Dexterous Action Decoder (`action_decoder.py`)
+*   **Goal:** Spatial Intelligence & Dexterity.
+*   **Mechanism:** A Dual-Head Neural Network.
+    *   **Head 1 (Logits):** Decides *what* to do (Draw, Symmetrize, Clear, Noise).
+    *   **Head 2 (Params):** Decides *where* and *how* (x, y, scale, axis).
+*   **Key Feature:** **No Hardcoded Templates.** The agent must learn to output raw continuous coordinates to interact with the world.
 
-### 👁️ System 2: Imagination (Slow)
-- **Mechanism:** `LatentWorldModel` + `TreeSearchPlanner`
-- **Usage:** Complex problems, high uncertainty, high risk.
-- **Process:**
-  1. **Imagine:** Simulate potential actions in latent space ($z_t \to z_{t+1}$).
-  2. **Plan:** Search for the path that minimizes predicted energy.
-  3. **Act:** Execute the best plan.
+### 2. The Mind: Graph Attention Manifold (`manifold.py`)
+*   **Goal:** Relational Reasoning & Logical Consistency.
+*   **Mechanism:** **Graph Attention Network (GAT)**.
+*   **Process:**
+    1.  **Perception (`vision.py`):** Extracts objects as Nodes and spatial relationships as Edges.
+    2.  **Reasoning:** The GAT infers causal relationships between nodes.
+    3.  **Axiom Injection:** The system measures its thoughts against a "Truth Vector" to determine logical consistency.
 
----
+### 3. The Heart: Neuro-Chemical Engine (`energy.py`)
+*   **Goal:** Intrinsic Motivation & Homeostasis.
+*   **Mechanism:** A Dual-Hormone System.
+    *   **🔥 Dopamine (The Drive):** Spikes when energy (error) drops rapidly. Drives exploration and chaos.
+    *   **💧 Serotonin (The Peace):** Rises when the system is stable and consistent with Truth. Promotes order and crystallization.
+*   **Dynamics:** The agent naturally transitions from a Dopamine-driven learner (Chaos) to a Serotonin-driven master (Order).
 
-## Architecture: The Cognitive Stack
-
-### 1. Perception Layer (`vision.py`)
-- **Input:** Raw Grid
-- **Output:** Object Graph ($G$)
-
-### 2. Intuition Layer (`action_decoder.py`)
-- **Input:** Brain State ($z_t$)
-- **Output:** Action Logits (Policy)
-
-### 3. Imagination Layer (`imagination.py`) **[NEW]**
-- **Input:** State ($z_t$), Action ($a$)
-- **Output:** Predicted Next State ($\hat{z}_{t+1}$), Predicted Energy ($\hat{E}$)
-- **Role:** The Physics Engine of the Mind.
-
-### 4. Planning Layer (`planner.py`) **[NEW]**
-- **Input:** Current State, Imagination Model
-- **Output:** Optimal Action ($a^*$)
-- **Role:** Tree Search / Lookahead.
-
-### 5. Meta-Cognition Layer (`meta_cognition.py`) **[NEW]**
-- **Input:** Entropy, Energy Variance
-- **Output:** Control Signal (Switch between System 1 & 2)
-- **Role:** The Manager.
+### 4. The Soul: Intrinsic Crystallization (`automata.py`)
+*   **Goal:** Enlightenment & Knowledge Preservation.
+*   **Mechanism:** **Elastic Weight Consolidation (EWC)**.
+*   **Behavior:** When Serotonin levels peak and the mind is still, the system enters "Nirvana". It freezes its weights (Crystallization) to preserve the learned structure, resisting further entropy.
 
 ---
 
@@ -54,17 +41,29 @@ Unlike previous versions, which acted based on immediate intuition, this system 
 
 ### Prerequisites
 ```bash
-pip install torch>=2.0.0 numpy>=1.24.0
+pip install torch numpy
 ```
 
 ### Execution
-Run the Meta-Cognitive ASI:
+Run the full simulation:
 ```bash
 python main_system.py
 ```
 
+### Expected Output
+You will see the agent evolve through its life cycle:
+1.  **Birth:** High entropy, random actions.
+2.  **Growth (Chaos):** High Dopamine spikes as it discovers patterns (e.g., Symmetry).
+3.  **Maturity (Order):** Serotonin rises as it perfects its actions.
+4.  **Nirvana:** The system crystallizes and stops learning.
+
+```text
+Step 01 | Mode: CHAOS | Dopa: 1.00 Sero: 0.49 | Energy: 0.0000 | Action: SYMMETRIZE
+...
+       -> 🧘 Nirvana Reached. Mind is Still.
+```
+
 ---
 
-**Architect:** User (The Director)  
-**Engineer:** Gemini (Lead Architect)  
-**Version:** System 2 Thinking
+**Architect:** User (The Director)
+**Engineer:** Gemini (The Builder)
