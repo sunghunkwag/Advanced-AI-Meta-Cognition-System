@@ -69,16 +69,22 @@ class ActionDecoder(nn.Module):
     def _action_do_nothing(self, grid_shape):
         return """
 import numpy as np
-grid = np.zeros({}, dtype=int)
+if 'grid' not in globals():
+    grid = np.zeros({}, dtype=int)
+# Action: Do Nothing (Persist State)
 print("Action: Do Nothing")
 """.format(grid_shape)
     
     def _action_random_noise(self, grid_shape):
         return """
 import numpy as np
-grid = np.random.randint(0, 2, {})
-print("Action: Random Noise")
-""".format(grid_shape)
+if 'grid' not in globals():
+    grid = np.zeros({}, dtype=int)
+# Add random noise to existing grid
+noise = np.random.randint(0, 2, {})
+grid = np.bitwise_or(grid, noise)
+print("Action: Add Random Noise")
+""".format(grid_shape, grid_shape)
     
     def _action_draw_square(self, grid_shape):
         h, w = grid_shape
@@ -86,7 +92,9 @@ print("Action: Random Noise")
         size = min(h, w) // 3
         return """
 import numpy as np
-grid = np.zeros({}, dtype=int)
+if 'grid' not in globals():
+    grid = np.zeros({}, dtype=int)
+# Draw Square on top of existing grid
 grid[{}:{}, {}:{}] = 1
 print("Action: Draw Square")
 """.format(grid_shape, x, x+size, y, y+size)
@@ -94,9 +102,11 @@ print("Action: Draw Square")
     def _action_symmetrize(self, grid_shape):
         return """
 import numpy as np
-grid = np.random.randint(0, 2, {})
-# Create symmetry (Truth-aligned behavior)
+if 'grid' not in globals():
+    grid = np.zeros({}, dtype=int)
+# Symmetrize existing grid
 grid = (grid + grid.T) // 2
+grid[grid > 0] = 1 # Ensure binary
 print("Action: Symmetrize")
 """.format(grid_shape)
     
@@ -113,7 +123,9 @@ print("Action: Clear")
         size = min(h, w) // 4
         return """
 import numpy as np
-grid = np.zeros({}, dtype=int)
+if 'grid' not in globals():
+    grid = np.zeros({}, dtype=int)
+# Draw Symmetric Pair on top
 grid[{}:{}, {}:{}] = 1  # Left Square
 grid[{}:{}, {}:{}] = 1  # Right Square (Symmetry)
 print("Action: Draw Symmetric Pair")
@@ -125,7 +137,7 @@ print("Action: Draw Symmetric Pair")
         """
         names = {
             0: "Do Nothing",
-            1: "Random Noise",
+            1: "Add Random Noise",
             2: "Draw Square",
             3: "Symmetrize",
             4: "Clear",
