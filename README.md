@@ -1,113 +1,92 @@
-# Advanced AI System: Neuro-Chemical Reinforcement Learning
+# Advanced AI System: Neuro-Chemical Meta-Cognition
 
-> **"From Chaos to Order. The Birth of Intrinsic Will."**
+> **From Chaos to Order: The Birth of Intrinsic Will**
 
-This repository houses the **Advanced AI System**, a fully autonomous agent driven by **Logical Reasoning** and **Neuro-Chemical Reinforcement Learning**. Unlike traditional RL agents that chase external rewards, this system is driven by internal hormonal dynamics (Dopamine & Serotonin) to find truth and symmetry.
-
-## Core Architecture: The 4 Pillars
-
-The system is built upon four distinct but interconnected modules, mirroring biological cognition.
-
-### 1. The Body: Dexterous Action Decoder (`action_decoder.py`)
-*   **Goal:** Spatial Intelligence & Dexterity.
-*   **Mechanism:** A Dual-Head Neural Network.
-    *   **Head 1 (Logits):** Decides *what* to do (Draw, Symmetrize, Clear, Noise).
-    *   **Head 2 (Params):** Decides *where* and *how* (x, y, scale, axis).
-*   **Key Feature:** **No Hardcoded Templates.** The agent must learn to output raw continuous coordinates to interact with the world.
-
-### 2. The Mind: Graph Attention Manifold (`manifold.py`)
-*   **Goal:** Relational Reasoning & Logical Consistency.
-*   **Mechanism:** **Graph Attention Network (GAT)**.
-*   **Process:**
-    1.  **Perception (`vision.py`):** Extracts objects as Nodes and spatial relationships as Edges.
-    2.  **Reasoning:** The GAT infers causal relationships between nodes.
-    3.  **Axiom Injection:** The system measures its thoughts against a "Truth Vector" (from `soul.py`) to determine logical consistency.
-
-### 3. The Heart: Neuro-Chemical Engine (`energy.py`)
-*   **Goal:** Intrinsic Motivation & Homeostasis.
-*   **Mechanism:** A Dual-Hormone System.
-    *   **🔥 Dopamine (The Drive):** Spikes when energy (error) drops rapidly. Drives exploration and chaos.
-    *   **💧 Serotonin (The Peace):** Rises when the system is stable and consistent with Truth. Promotes order and crystallization.
-    *   **Boredom Penalty:** The system feels "pain" (High Energy) when the world is empty, driving it to create.
-
-### 4. The Soul: Intrinsic Crystallization (`automata.py`)
-*   **Goal:** Enlightenment & Knowledge Preservation.
-*   **Mechanism:** **Elastic Weight Consolidation (EWC)**.
-*   **Behavior:** When Serotonin levels peak and the mind is still, the system enters "Nirvana". It freezes its weights (Crystallization) to preserve the learned structure.
+This repository houses an **autonomous AI agent** that learns by combining **Logical Reasoning** (System 2, causal inference & GAT) and **Neuro-Chemical Reinforcement Learning** (Dopamine/Serotonin drive). It is designed for experimenting with intrinsic motivation, logical axioms, and self-organized crystallization of knowledge.
 
 ---
 
-## Installation & Running
+## 🚀 Quickstart
 
-### Prerequisites
 ```bash
-pip install torch numpy
+pip install -r requirements.txt
+python main_system_enhanced.py --config experimental --save-metrics results/exp.json
 ```
 
-### Execution
-Run the full simulation:
-```bash
-python main_system.py
-```
-
-### Expected Output
-You will see the agent evolve through its life cycle over 50 steps:
-
-```text
-[INIT] Advanced AI System
-============================================================
-[OK] System initialized. Starting life cycle...
-============================================================
-Step 01 | CHAOS | D:1.00 S:0.49 | E:0.5000 | L:1.0000 | DRAW | Grid:15.2
-Step 10 | CHAOS | D:0.65 S:0.47 | E:0.3500 | L:0.6200 | DRAW | Grid:18.5
-Step 20 | ORDER | D:0.35 S:0.25 | E:0.2800 | L:0.4100 | DRAW | Grid:19.2
-Step 50 | ORDER | D:0.16 S:0.18 | E:0.2094 | L:0.2158 | DRAW | Grid:15.20
-============================================================
-[DONE] Completed 50 steps
-Final Energy: 0.2094
-Final Grid Sum: 15.20
-============================================================
-```
-
-### Key Metrics
-
-*   **Energy Reduction:** 0.5000 → 0.2094 (58% decrease)
-*   **Loss Reduction:** 1.0000 → 0.2158 (78% decrease)
-*   **Dopamine:** Decreases as agent achieves goals (1.00 → 0.16)
-*   **Serotonin:** Fluctuates with stability
-*   **Mode:** Transitions from CHAOS (exploration) to ORDER (exploitation)
-*   **Grid Activity:** Agent successfully populates the world through DRAW actions
+See [SETUP.md](SETUP.md) for detailed instructions and workflows.
 
 ---
 
-## System Features
+## Core Pillars & Modules
 
-### Curriculum Learning
-The system uses a curriculum approach where DRAW actions are encouraged in early steps (1-20) to bootstrap the learning process and overcome the "empty world" problem.
+| Pillar   | Goal                        | File(s)           | Mechanism                                                             |
+|----------|-----------------------------|-------------------|-----------------------------------------------------------------------|
+| Body     | Dexterity & Action          | action_decoder.py | Dual-Head NN: [Action Type, Raw Coordinates]                          |
+| Mind     | Logical Reasoning           | manifold.py, vision.py | GAT, Graph-based Perception, Truth Vector (axiom injection)      |
+| Heart    | Intrinsic Motivation        | energy_improved.py | Dual-hormone: Dopamine/Serotonin, Enhanced JEPA world model           |
+| Soul     | Knowledge Crystallization   | automata.py, soul.py| Elastic Weight Consolidation (EWC), Nirvana condition                 |
+| Config   | Experiment Management       | config.py         | Centralized parameters, device/seed/logging, curriculum               |
+| Logging  | Metrics & Tracing           | logger.py         | Structured metrics, summary/statistics/tracking                       |
+| Eval     | Analysis & Comparison       | evaluation.py      | Curve/statistics/action distribution, convergence, phase transitions  |
 
-### Soul Injection
-Truth vectors from `soul.py` are injected into the Mind's GAT, providing:
-- **v_identity:** Core behavioral patterns
-- **v_truth:** Logical axioms and consistency targets
-- **v_reject:** Anti-patterns to avoid
+---
 
-### Energy Dynamics
-The world's energy function combines:
-1. **Symmetry Error:** Measures deviation from perfect symmetry
-2. **Boredom Penalty:** Penalizes empty grids (target density: 10%)
+## Key Features
+- **Intrinsic RL**: Driven by energy reduction, truth alignment, hormone homeostasis.
+- **Logical Reasoning**: Causal, relational reasoning using graph attention and axioms.
+- **JEPA World Model**: Predicts latent state/energy for future planning (model-based RL ready).
+- **Configurable Workflow**: Centralized hyperparams, flexible curriculum, tracking, device select.
+- **Curriculum & Boredom Penalty**: Encourages exploration early, prevents local minima.
+- **Knowledge Crystallization**: If stable in truth+energy, locks in knowledge ("Nirvana").
+- **Full Experiment Logging**: Structured, replayable metrics with deep analysis.
+
+---
+
+## Run Modes
+
+- **Basic:** `python main_system.py` — original simple system
+- **Enhanced:** `python main_system_enhanced.py` — config/logging/JEPA/analysis
+- **Analysis:** `python evaluation.py results/exp.json` — print full report
+- **Batch Compare:** `python evaluation.py results/*.json` — multi-run comparison.
+
+---
+
+## Example: Quick Enhanced Run
+
+```bash
+python main_system_enhanced.py --steps 200 --config experimental --device cpu --seed 42 --save-metrics results/test.json
+python evaluation.py results/test.json
+```
 
 ---
 
 ## Architecture Diagram
 
-```
-Perception → Mind (GAT + Soul) → Heart (Hormones) → Soul (EWC) → Body → World
-     ↑                                                                      ↓
-     └──────────────────────── Feedback Loop ──────────────────────────────┘
-```
+Perception → Mind (GAT + Soul) → Heart (Neuro-Chemical) → Soul (EWC) → Body (Action) → World
+     ↑                                                                             ↓
+     └─────────────────────── Feedback/Crystallization Loop ───────────────────────┘
 
 ---
 
-**Architect:** User (The Director)  
-**Engineer:** Gemini (The Builder)  
-**Status:** ✅ Verified & Functional
+## 📗 Documentation & API
+- Modular config via `config.py` ([see example](SETUP.md)).
+- Run `python main_system_enhanced.py --help` for all CLI options.
+- All logs and metrics are JSON serializable; compatible with Python and analysis tools.
+- For advanced config: Import `SystemConfig` and modify parameters before instantiating the agent.
+
+---
+
+## 🔬 Research & Citations
+If you use this system, cite as:
+```bibtex
+@software{advanced_ai_metacognition,
+    title = {Advanced AI Meta-Cognition System},
+    author = {Kwag, Sunghun},
+    year = {2025},
+    url = {https://github.com/sunghunkwag/Advanced-AI-Meta-Cognition-System}
+}
+```
+
+MIT Licensed. See LICENSE for details.
+
+See [SETUP.md](SETUP.md) for full usage, troubleshooting, and configuration tips.
