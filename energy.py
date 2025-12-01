@@ -6,59 +6,96 @@ class NeuroChemicalEngine:
     Manages the emotional state and motivation of the agent via Dopamine and Serotonin.
     """
     def __init__(self):
-        self.dopamine = 0.5  # Drive / Curiosity
-        self.serotonin = 0.5 # Peace / Stability
-        self.prev_energy = float('inf')
+        self.dopamine = 0.5  # Pleasure / Novelty / Learning
+        self.serotonin = 0.5 # Satisfaction / Meaning / Order
+        self.cortisol = 0.0  # Stress / Boredom / Chaos
         
-        # History for variance calculation
+        # Internal State Trackers
+        self.prev_energy = float('inf')
         self.energy_history = []
+        self.boredom_counter = 0
+        self.chaos_counter = 0
+        self.last_prediction_error = 0.0
 
-    def update(self, current_energy, consistency_score):
+    def update(self, world_energy, consistency_score, density=0.0, symmetry=0.0, prediction_error=0.0):
         """
-        Update hormone levels based on energy (error) and consistency (truth).
+        Update hormone levels based on internal and external states.
         
         Args:
-            current_energy (float): The current error/loss of the system.
-            consistency_score (float): How close the mind is to the Axiom (0-1).
+            world_energy (float): Physical disorder (Energy).
+            consistency_score (float): Mental consistency (Truth).
+            density (float): Grid occupancy (0-1).
+            symmetry (float): Visual symmetry score (0-1).
+            prediction_error (float): Surprise/Novelty (0-1).
         """
-        # 1. Dopamine Dynamics (Reward Prediction Error)
-        # Spike when energy drops significantly (Improvement)
-        energy_delta = self.prev_energy - current_energy
-        if energy_delta > 0:
-            self.dopamine += energy_delta * 2.0  # Boost drive
-        else:
-            self.dopamine *= 0.95 # Decay if no progress
+        # 1. Cortisol Dynamics (The Stick)
+        # Triggered by Boredom (No change) or Chaos (High prediction error)
+        energy_delta = abs(self.prev_energy - world_energy)
         
+        if energy_delta < 0.001: # Boredom
+            self.boredom_counter += 1
+            # Dampened accumulation: 0.05 -> 0.02
+            self.cortisol += 0.02 * (self.boredom_counter / 10.0) 
+        else:
+            self.boredom_counter = 0
+            self.cortisol -= 0.05 # Slower decay (lingering stress)
+            
+        if prediction_error > 0.6: # Chaos/Anxiety
+            self.chaos_counter += 1
+            self.cortisol += 0.05 # Reduced from 0.1
+        else:
+            self.chaos_counter = 0
+            # Recovery from stress
+            if self.cortisol > 0:
+                self.cortisol -= 0.02
+            
+        self.cortisol = np.clip(self.cortisol, 0.0, 1.0)
+        
+        # 2. Dopamine Dynamics (The Carrot - Excitement)
+        # Triggered by Learning (Error reduction) and Novelty (Prediction Error)
+        # We want Dopamine when we *resolve* surprise (Learning) or *find* something new.
+        
+        # Learning reward: If we reduced energy significantly
+        learning_reward = 0.0
+        if self.prev_energy - world_energy > 0.01:
+            learning_reward = (self.prev_energy - world_energy) * 5.0
+            
+        # Novelty reward: Moderate prediction error is good (Curiosity)
+        novelty_reward = 0.0
+        if 0.1 < prediction_error < 0.5:
+            novelty_reward = prediction_error * 2.0
+            
+        target_dopamine = learning_reward + novelty_reward
+        self.dopamine = self.dopamine * 0.8 + target_dopamine * 0.2
         self.dopamine = np.clip(self.dopamine, 0.0, 1.0)
-        self.prev_energy = current_energy
-
-        # 2. Serotonin Dynamics (Homeostasis & Truth)
-        # Rise when consistent with Truth and Energy is low/stable
-        is_stable = False
-        if len(self.energy_history) > 5:
-            variance = np.var(self.energy_history[-5:])
-            if variance < 0.01:
-                is_stable = True
         
-        if is_stable and consistency_score > 0.8 and current_energy < 0.2:
-            self.serotonin += 0.1
+        # 3. Serotonin Dynamics (The Carrot - Meaning)
+        # Triggered by "Meaningful Order" = Density * Symmetry * Consistency
+        # Empty grid (Density=0) -> Serotonin 0
+        # Messy grid (Symmetry=0) -> Serotonin 0
+        
+        meaningful_order = density * symmetry * consistency_score
+        
+        # Serotonin builds up slowly (Satisfaction takes time)
+        if meaningful_order > 0.1:
+            self.serotonin = self.serotonin * 0.9 + meaningful_order * 0.1
         else:
-            self.serotonin *= 0.98 # Decay if chaotic
+            self.serotonin *= 0.95 # Decay if meaningless
             
         self.serotonin = np.clip(self.serotonin, 0.0, 1.0)
-        self.energy_history.append(current_energy)
-
-    def get_state(self):
-        """
-        Returns the dominant state: 'CHAOS' (Dopamine driven) or 'ORDER' (Serotonin driven).
-        """
-        if self.dopamine > self.serotonin:
-            return "CHAOS"
-        else:
-            return "ORDER"
+        
+        # Update history
+        self.prev_energy = world_energy
+        self.energy_history.append(world_energy)
+        if len(self.energy_history) > 100:
+            self.energy_history.pop(0)
 
     def get_hormones(self):
-        return self.dopamine, self.serotonin
+        return {
+            'dopamine': self.dopamine,
+            'serotonin': self.serotonin,
+            'cortisol': self.cortisol
+        }
 
 import torch
 import torch.nn as nn
