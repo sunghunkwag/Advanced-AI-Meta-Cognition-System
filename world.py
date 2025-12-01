@@ -38,11 +38,14 @@ class World:
         elif act_type == "NOISE":
             noise = np.random.rand(self.size, self.size) * 0.1
             self.grid += noise
+            self.grid = np.clip(self.grid, 0, 1)  # Prevent overflow
             
         elif act_type == "SYMMETRIZE":
             # Simple horizontal symmetry
             self.grid = (self.grid + np.fliplr(self.grid)) / 2
 
+        # Ensure all grid values stay in valid range [0, 1]
+        self.grid = np.clip(self.grid, 0, 1)
         return self.grid
 
 
@@ -54,11 +57,16 @@ class World:
         # 1. Symmetry Energy (Lower is better)
         sym_diff = np.abs(self.grid - np.fliplr(self.grid)).mean()
         
-        # 2. Entropy/Boredom Penalty
-        # If the world is empty, Energy should be high.
-        # Target density: 10% filled.
-        density = self.grid.mean()
+        # 2. Density-based Penalty
+        # Count occupied cells (threshold > 0.1) vs total cells
+        occupied_ratio = np.sum(self.grid > 0.1) / (self.size * self.size)
         target_density = 0.1
-        density_penalty = abs(target_density - density) * 5.0
+        density_error = abs(target_density - occupied_ratio)
+        
+        # Quadratic penalty for extreme deviations
+        if density_error > 0.05:
+            density_penalty = density_error * 10.0 + (density_error ** 2) * 50.0
+        else:
+            density_penalty = density_error * 5.0
         
         return sym_diff + density_penalty

@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 import sys
+import json
 
 # Import Core Modules
 from vision import VisionSystem
@@ -12,9 +13,14 @@ from automata import IntrinsicAutomata
 from world import World
 from soul import get_soul_vectors
 
-def main():
-    print("[INIT] Advanced AI System")
-    print("="*60)
+def run_simulation(seed=42):
+    """
+    Run a single simulation with the given random seed.
+    Returns: dict with final_energy, final_steps, final_grid_sum, crystallized
+    """
+    # Set random seeds
+    torch.manual_seed(seed)
+    np.random.seed(seed)
     
     # Initialize World & Perception
     world = World(size=16)
@@ -42,9 +48,6 @@ def main():
     energy_history = []
     action_history = []
     best_energy = float('inf')
-
-    print("[OK] System initialized. Starting life cycle...")
-    print("="*60)
     
     # Life Cycle Loop (1000 steps)
     for step in range(1, 1001):
@@ -130,34 +133,79 @@ def main():
             if world_energy < best_energy:
                 best_energy = world_energy
             
-            # === LOGGING ===
-            if step % 50 == 1 or step <= 50:  # Log every 50 steps or first 50
-                print(f"Step {step:03d} | {state_mode:5s} | "
-                      f"D:{dopamine:.2f} S:{serotonin:.2f} | "
-                      f"E:{world_energy:.4f} | "
-                      f"L:{loss.item():.4f} | "
-                      f"LR:{lr:.5f} | "
-                      f"{action['type']:10s} | "
-                      f"Grid:{world.grid.sum():.1f}")
-            
             # === CHECK CRYSTALLIZATION ===
             if soul.is_crystallized():
-                print("\n" + "="*60)
-                print("[NIRVANA] Mind crystallized. Simulation complete.")
-                print("="*60)
-                break
+                return {
+                    'seed': seed,
+                    'final_steps': step,
+                    'final_energy': float(world_energy),
+                    'final_grid_sum': float(world.grid.sum()),
+                    'best_energy': float(best_energy),
+                    'crystallized': True,
+                    'action_counts': {act: action_history.count(act) for act in set(action_history)}
+                }
                 
         except Exception as e:
-            print(f"\n[ERROR] Step {step} failed: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[ERROR] Seed {seed}, Step {step} failed: {e}")
             break
     
-    print("\n" + "="*60)
-    print(f"[DONE] Completed {step} steps")
-    print(f"Final Energy: {world_energy:.4f}")
-    print(f"Final Grid Sum: {world.grid.sum():.2f}")
-    print("="*60)
+    # Completed without crystallization
+    return {
+        'seed': seed,
+        'final_steps': step,
+        'final_energy': float(world_energy),
+        'final_grid_sum': float(world.grid.sum()),
+        'best_energy': float(best_energy),
+        'crystallized': False,
+        'action_counts': {act: action_history.count(act) for act in set(action_history)}
+    }
 
 if __name__ == "__main__":
-    main()
+    # Run multiple tests with different seeds
+    seeds = [42, 123, 456, 789, 2024]
+    results = []
+    
+    print("="*60)
+    print("MULTI-SEED ROBUSTNESS TEST")
+    print("="*60)
+    
+    for i, seed in enumerate(seeds, 1):
+        print(f"\n[Test {i}/{len(seeds)}] Running with seed {seed}...")
+        result = run_simulation(seed)
+        results.append(result)
+        
+        print(f"  → Steps: {result['final_steps']}, "
+              f"Energy: {result['final_energy']:.4f}, "
+              f"Grid: {result['final_grid_sum']:.1f}, "
+              f"Crystallized: {result['crystallized']}")
+    
+    # Statistical Analysis
+    print("\n" + "="*60)
+    print("STATISTICAL ANALYSIS")
+    print("="*60)
+    
+    steps = [r['final_steps'] for r in results]
+    energies = [r['final_energy'] for r in results]
+    grids = [r['final_grid_sum'] for r in results]
+    crystallized_count = sum(1 for r in results if r['crystallized'])
+    
+    print(f"\nSteps to Completion:")
+    print(f"  Mean: {np.mean(steps):.1f} ± {np.std(steps):.1f}")
+    print(f"  Min: {np.min(steps)}, Max: {np.max(steps)}")
+    
+    print(f"\nFinal Energy:")
+    print(f"  Mean: {np.mean(energies):.4f} ± {np.std(energies):.4f}")
+    print(f"  Min: {np.min(energies):.4f}, Max: {np.max(energies):.4f}")
+    
+    print(f"\nFinal Grid Sum:")
+    print(f"  Mean: {np.mean(grids):.1f} ± {np.std(grids):.1f}")
+    print(f"  Min: {np.min(grids):.1f}, Max: {np.max(grids):.1f}")
+    
+    print(f"\nCrystallization Rate: {crystallized_count}/{len(seeds)} ({100*crystallized_count/len(seeds):.0f}%)")
+    
+    # Save results
+    with open('multi_seed_results.json', 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    print(f"\n✓ Results saved to multi_seed_results.json")
+    print("="*60)
