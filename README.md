@@ -160,6 +160,32 @@ The system now implements a **biologically-inspired Dual-Process Architecture**,
 
 ---
 
+## New: System 3 - Recursive Meta-Learning
+
+> **"Learning How to Learn."**
+
+The system has evolved beyond simple adaptation. It now possesses **Meta-Cognition**, enabling it to optimize its own learning process in real-time.
+
+### The Meta-Learner (`meta_cognition.py`)
+A higher-order LSTM network that observes the agent's learning trajectory and dynamically tunes the brain's plasticity.
+
+**Inputs:**
+- Current Mind State (Latent Vector)
+- Previous Action
+- Current Hormone Balance (Reward)
+
+**Outputs (Dynamic Hyperparameters):**
+1.  **Learning Rate Scale (0.1x - 10x):** Should I learn fast (plasticity) or slow (stability)?
+2.  **Cortisol Sensitivity:** How much should pain (stress) drive my updates?
+3.  **Entropy Regularization:** Should I explore (curiosity) or exploit (habit)?
+
+### The Meta-Loop
+While the base agent optimizes for consistency and energy, the **Meta-Learner optimizes for long-term emotional well-being**.
+- It uses **REINFORCE** (Policy Gradient) to maximize the cumulative signal: `Dopamine + Serotonin - Cortisol`.
+- This creates a feedback loop where the agent *learns to learn* in a way that leads to peace (Nirvana) faster.
+
+---
+
 ## Future Enhancements
 - Multi-environment stress testing
 - "Flow State" detection (High Dopamine + High Serotonin + Low Cortisol)
