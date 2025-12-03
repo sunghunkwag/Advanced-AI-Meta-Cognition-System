@@ -15,9 +15,10 @@ from soul import get_soul_vectors
 # New Modules
 from environment_manager import EnvironmentManager
 from cortex import PrefrontalCortex
+from meta_cognition import MetaLearner
 
 def main():
-    print("[INIT] Advanced AI: Dual-Process Architecture (Instinct vs Reason)")
+    print("[INIT] Advanced AI: Dual-Process Architecture + Meta-Learning")
     print("="*80)
     
     # Initialize Systems
@@ -30,6 +31,12 @@ def main():
     # System 2: The Cortex (Reason)
     cortex = PrefrontalCortex()
     
+    # System 3: Meta-Learner (Self-Improvement)
+    # Input: Latent(8) + Action(1) + Reward(1) + GradNorm(1) + EnergyDelta(1) = 12
+    meta_learner = MetaLearner(input_dim=12, hidden_dim=64)
+    meta_hidden = None
+    meta_update_interval = 20
+
     # Body & Mind
     vision = VisionSystem()
     LATENT_DIM = 8
@@ -38,18 +45,23 @@ def main():
     body = ActionDecoder(latent_dim=LATENT_DIM)
     soul = IntrinsicAutomata(mind)
     
-    optimizer = optim.Adam(list(mind.parameters()) + list(body.parameters()), lr=0.01)
+    base_lr = 0.01
+    optimizer = optim.Adam(list(mind.parameters()) + list(body.parameters()), lr=base_lr)
     
     # Tracking
     history = {
         'energy': [], 'dopamine': [], 'serotonin': [], 'cortisol': [],
-        'willpower': [], 'actions': []
+        'willpower': [], 'actions': [], 'meta_lr': [], 'meta_cort': []
     }
     
     print("[OK] Systems Online. Starting Life Cycle...")
     print("="*80)
     
     prev_hormones = {'dopamine': 0.5, 'serotonin': 0.5, 'cortisol': 0.0}
+    prev_energy = 100.0
+    act_map = {'DRAW': 0, 'NOISE': 1, 'CLEAR': 2, 'SYMMETRIZE': 3}
+
+    grad_norm = 0.0 # Initial
     
     for step in range(1, 1001):
         try:
@@ -66,121 +78,119 @@ def main():
             network_action = body.decode_action(action_logits, params)
             
             # 3. HEART (System 1 "Instinct")
-            # Calculate environmental stats for hormones
             world_energy = world.calculate_energy()
             density = np.sum(world_state > 0.1) / world_state.size
             
-            # Symmetry calculation
             h_sym = 1.0 - np.abs(world_state - np.fliplr(world_state)).mean()
             v_sym = 1.0 - np.abs(world_state - np.flipud(world_state)).mean()
             symmetry = (h_sym + v_sym) / 2
             
-            # Prediction Error (Simulated for now, or use z difference)
-            # For now, use consistency as a proxy for "understanding" (High consistency = Low error)
             prediction_error = 1.0 - consistency.item()
             
-            # Update Hormones
             heart.update(world_energy, consistency.item(), density, symmetry, prediction_error)
             hormones = heart.get_hormones()
             
-            # Determine Instinctual Urge
             instinct_urge = network_action['type']
             if hormones['cortisol'] > 0.8:
-                instinct_urge = 'PANIC' # The Lizard Brain takes over
+                instinct_urge = 'PANIC'
             
             # 4. CORTEX (System 2 "Reason")
-            # Deliberate: Should we follow the urge or override?
             final_decision = cortex.deliberate(world_state, instinct_urge, hormones)
             
             # 5. EXECUTION
-            real_action = network_action # Default
-            
+            real_action = network_action
             if final_decision == 'PANIC':
-                # Force random chaotic action
                 real_action = {'type': 'NOISE', 'x': np.random.randint(0, 8), 'y': np.random.randint(0, 8), 'value': 1.0}
             elif final_decision == 'STAY_CALM':
-                # Force network action (suppress panic)
                 real_action = network_action
             elif final_decision == 'FOCUS_ORDER':
-                # Force ordering action
                 real_action = {'type': 'SYMMETRIZE', 'axis': 0}
             else:
-                # Normal execution
                 real_action = network_action
-                # If instinct was NOISE but decision was NOISE, it passes through here
             
-            # Apply Action
             world.apply_action(real_action)
             
-            # 6. LEARNING (The "Feeling")
-            # Loss = Cortisol (Pain) - [Dopamine (Pleasure) + Serotonin (Meaning)]
-            # We want to Minimize Loss => Minimize Pain, Maximize Pleasure/Meaning
+            # --- META-COGNITION (System 3) ---
+            # Calculate metrics
+            act_val = act_map.get(real_action['type'], 0)
+            energy_delta = prev_energy - world_energy
             
-            # Calculate hormone deltas for memory
+            # Meta-Reward: Promote High Hormones AND Energy Reduction (Progress)
+            # If we reduce energy, that's good (+delta).
+            # If we are stable (high Serotonin), that's good.
+            current_meta_reward = (hormones['dopamine'] + hormones['serotonin']) - hormones['cortisol']
+            current_meta_reward += energy_delta * 2.0 # Stronger signal for progress
+            
+            meta_input = torch.cat([
+                z.detach().float(), # (1, 8)
+                torch.tensor([[float(act_val)]]).float(), # (1, 1)
+                torch.tensor([[current_meta_reward]]).float(), # (1, 1)
+                torch.tensor([[float(grad_norm)]]).float(), # (1, 1)
+                torch.tensor([[float(energy_delta)]]).float() # (1, 1)
+            ], dim=1).unsqueeze(0) # (1, 1, 12)
+            
+            # Predict Learning Hyperparameters
+            (meta_lr, meta_cort, meta_ent), meta_log_prob, meta_hidden = meta_learner(meta_input, meta_hidden)
+            
+            # Detach hidden state
+            meta_hidden = (meta_hidden[0].detach(), meta_hidden[1].detach())
+            
+            # Store for Meta-Update
+            meta_learner.store_step(meta_log_prob, current_meta_reward)
+            
+            if step % meta_update_interval == 0:
+                meta_learner.update()
+            
+            # 6. LEARNING
+            # Apply dynamic learning rate
+            current_lr = base_lr * meta_lr.item()
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = current_lr
+            
+            # Calculate Entropy
+            probs = torch.softmax(action_logits, dim=-1)
+            entropy = -(probs * torch.log(probs + 1e-9)).sum()
+            
+            # Dynamic Loss Function
+            loss_tensor = (1.0 - consistency) + \
+                          (torch.tensor(world_energy) * hormones['cortisol'] * meta_cort) - \
+                          (entropy * meta_ent)
+            
+            optimizer.zero_grad()
+            loss_tensor.backward()
+
+            # Calculate Grad Norm for next step
+            total_norm = 0.0
+            for p in list(mind.parameters()) + list(body.parameters()):
+                if p.grad is not None:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+            grad_norm = total_norm ** 0.5
+
+            optimizer.step()
+            
+            # Update history
             hormone_delta = {
                 'dopamine': hormones['dopamine'] - prev_hormones['dopamine'],
                 'serotonin': hormones['serotonin'] - prev_hormones['serotonin'],
                 'cortisol': hormones['cortisol'] - prev_hormones['cortisol']
             }
-            
-            # Store Memory
             cortex.store_memory(world_state, final_decision, hormone_delta)
-            
-            # Backpropagate
-            # We construct a loss function that aligns with the hormone objective
-            # Loss = (Cortisol * 2) - (Dopamine + Serotonin)
-            # This is a reinforcement learning signal.
-            # Since we are using differentiable components (Mind/Body), we can try to guide them.
-            # However, hormones are calculated from non-differentiable world state.
-            # So we use the "Hormone State" as the target.
-            
-            # Simple Proxy Loss:
-            # If Cortisol is high, penalize current state/action.
-            # If Dopamine/Serotonin is high, reinforce.
-            
-            reward = (hormones['dopamine'] + hormones['serotonin']) - (hormones['cortisol'] * 2.0)
-            
-            # Policy Gradient-like loss: -log(prob) * reward
-            # But we have a continuous action space mixed with discrete.
-            # Let's use a simpler proxy:
-            # Minimize Energy (Physical) + Maximize Consistency (Mental) weighted by Hormones.
-            
-            # Actually, let's trust the user's design: "Loss = Cortisol - ..."
-            # We treat the hormone values as the loss magnitude.
-            
-            total_loss = (hormones['cortisol'] * 2.0) - (hormones['dopamine'] + hormones['serotonin'])
-            
-            # Add consistency loss (always want truth)
-            total_loss += (1.0 - consistency)
-            
-            # We need gradients. 
-            # Since world interaction is non-differentiable, we use the "REINFORCE" idea or simply
-            # attach the loss to the output logits if we had a target.
-            # Here, we simply backprop the consistency and add a "regret" term for the action?
-            # For simplicity in this version, we'll focus on the Consistency Loss + EWC, 
-            # and let the "Evolutionary" selection (or just the hormone dynamics driving the loop) handle the rest.
-            # Wait, if we don't backprop the hormone signal, the network won't learn to optimize hormones.
-            
-            # Fix: Use the Reward to scale the gradients?
-            # Let's use a simple trick: Loss = Consistency + (Energy * Cortisol)
-            # If Cortisol is high, Energy minimization becomes critical.
-            loss_tensor = (1.0 - consistency) + (torch.tensor(world_energy) * hormones['cortisol'])
-            
-            optimizer.zero_grad()
-            loss_tensor.backward()
-            optimizer.step()
-            
-            # Update history
+
             prev_hormones = hormones.copy()
+            prev_energy = world_energy
+
             history['energy'].append(world_energy)
             history['cortisol'].append(hormones['cortisol'])
-            history['willpower'].append(cortex.willpower)
+            history['meta_lr'].append(meta_lr.item())
+            history['meta_cort'].append(meta_cort.item())
             
             # Logging
             if step % 50 == 0:
                 print(f"S{step:03d} | E:{world_energy:.3f} | "
-                      f"Cort:{hormones['cortisol']:.2f} Dopa:{hormones['dopamine']:.2f} Sero:{hormones['serotonin']:.2f} | "
-                      f"Will:{cortex.willpower:.2f} | Act:{real_action['type']:10s} | Dec:{final_decision}")
+                      f"Cort:{hormones['cortisol']:.2f} Dopa:{hormones['dopamine']:.2f} | "
+                      f"Meta[LR:{meta_lr.item():.2f} C:{meta_cort.item():.2f} G:{grad_norm:.2f}] | "
+                      f"Act:{real_action['type']}")
                 
             # Nirvana Check
             if hormones['serotonin'] > 0.9 and hormones['cortisol'] < 0.1:
@@ -197,7 +207,7 @@ def main():
     print("Final Stats:")
     print(f"Energy: {history['energy'][-1]:.4f}")
     print(f"Avg Cortisol: {np.mean(history['cortisol']):.2f}")
-    print(f"Avg Willpower: {np.mean(history['willpower']):.2f}")
+    print(f"Avg Meta LR Scale: {np.mean(history['meta_lr']):.2f}")
     print("="*80)
 
 if __name__ == "__main__":

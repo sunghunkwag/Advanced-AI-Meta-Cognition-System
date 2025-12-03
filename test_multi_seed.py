@@ -65,8 +65,10 @@ def run_simulation(seed=42):
             
             # === HEART (Emotions) ===
             heart.update(world_energy, consistency.item())
-            dopamine, serotonin = heart.get_hormones()
-            state_mode = heart.get_state()
+            hormones = heart.get_hormones()
+            dopamine = hormones['dopamine']
+            serotonin = hormones['serotonin']
+            # state_mode = heart.get_state() # Removed as it doesn't exist in current energy.py
             
             # === SOUL (Crystallization Check) ===
             soul.update_state((dopamine, serotonin))
@@ -147,6 +149,8 @@ def run_simulation(seed=42):
                 
         except Exception as e:
             print(f"[ERROR] Seed {seed}, Step {step} failed: {e}")
+            import traceback
+            traceback.print_exc()
             break
     
     # Completed without crystallization
