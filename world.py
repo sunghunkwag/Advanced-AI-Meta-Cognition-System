@@ -17,9 +17,11 @@ class World:
         Apply the action from the Body to the World.
         """
         act_type = action_dict['type']
-        x, y = action_dict['x'], action_dict['y'] # [-1, 1]
         
-        # Denormalize coordinates
+        # Denormalize coordinates if present
+        x = action_dict.get('x', 0)
+        y = action_dict.get('y', 0)
+
         c = int((x + 1) / 2 * (self.size - 1))
         r = int((y + 1) / 2 * (self.size - 1))
         
