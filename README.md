@@ -46,124 +46,52 @@ pip install torch numpy
 
 ### Execution
 
-Run the basic system:
-```bash
-python main_system.py
-```
-
-Run the Dual-Process (Instinct vs Reason) system:
+**1. Basic Simulation (Single Life):**
 ```bash
 python main_system_dual.py
 ```
 
-Run multi-seed validation:
+**2. Autonomous Evolution (Recursive Self-Improvement):**
+This runs an infinite loop where the agent lives, learns, dies, and is reborn. The **Meta-Learner** persists across lives, optimizing the learning strategy (`meta_brain.pth`).
 ```bash
-python test_multi_seed.py
+python autonomous_evolution.py
+```
+*Run this in the background (`nohup python autonomous_evolution.py &`) to let the AI evolve over days/weeks.*
+
+**3. Validation Tests:**
+```bash
+python test_meta_learning.py  # Verify Meta-Learner performance
+python test_multi_seed.py     # Verify robustness
 ```
 
 ---
 
-## Recent Improvements 
+## New: System 3 - Recursive Meta-Learning
 
-### Advanced Learning Mechanisms
+> **"Learning How to Learn."**
 
-This system has been significantly enhanced with sophisticated learning dynamics:
+The system has evolved beyond simple adaptation. It now possesses **Meta-Cognition**, enabling it to optimize its own learning process in real-time.
 
-#### 1. **Epsilon-Greedy Exploration**
-- Decaying exploration rate (0.3 → 0.05) over 1000 steps
-- Prevents premature convergence to local minima
-- Ensures continued action space exploration
+### The Meta-Learner (`meta_cognition.py`)
+A higher-order LSTM network that observes the agent's learning trajectory and dynamically tunes the brain's plasticity.
 
-#### 2. **Adaptive Learning Rate**
-- Exponential decay schedule: `lr = 0.01 * (0.95 ** (step // 50))`
-- Enables fast initial learning and fine-grained convergence
-- Optimizes both exploration and exploitation phases
+**Inputs (Generation-Invariant):**
+- Consistency Score (Mental Stability)
+- Symmetry Score (Visual Order)
+- Density (Occupancy)
+- Last Action & Reward
+- Gradient Norm (Learning Stability)
+- Energy Delta (Progress)
 
-#### 3. **Progress-Based Reward Shaping**
-- Tracks energy improvement over sliding window
-- Provides intrinsic bonus for consistent progress
-- Accelerates gradient descent toward optimal solutions
+**Outputs (Dynamic Hyperparameters):**
+1.  **Learning Rate Scale (0.1x - 10x):** Should I learn fast (plasticity) or slow (stability)?
+2.  **Cortisol Sensitivity:** How much should pain (stress) drive my updates?
+3.  **Entropy Regularization:** Should I explore (curiosity) or exploit (habit)?
 
-#### 4. **Action Diversity Incentive**
-- Monitors recent action distribution
-- Rewards usage of diverse strategies
-- Prevents over-reliance on single action type
-
-#### 5. **Grid Constraints**
-- Value clipping to [0, 1] range prevents overflow
-- Improved density calculation using occupancy ratio
-- Adaptive quadratic penalty for extreme deviations
-
-### Performance Metrics
-
-**Energy Reduction:** 481.76 → 0.06 (**99.8%↓**)  
-**Convergence Speed:** Average 30 steps for successful runs  
-**Success Rate:** 80% across multiple random seeds  
-**Crystallization:** Achieves "Nirvana" state consistently
-
-### Multi-Seed Validation
-
-Tested with 5 different random seeds:
-
-| Seed | Steps | Final Energy | Crystallized | Result |
-|------|-------|--------------|--------------|--------|
-| 42 | 60 | 0.114 | ✅ | Success |
-| 123 | 1000 | 1.500 | ❌ | Failed |
-| 456 | 13 | 0.134 | ✅ | Success |
-| 789 | 27 | 0.188 | ✅ | Success |
-| 2024 | 21 | **0.061** | ✅ | **Best** |
-
-**Statistical Summary:**
-- Successful runs: 80% (4/5)
-- Average steps (successful): 30.3 ± 20.4
-- Average energy (successful): 0.124 ± 0.053
-
----
-
-## Latest: Dual-Process Architecture 
-
-### Revolutionary Human-Like Cognition
-
-The system now implements a **biologically-inspired Dual-Process Architecture**, modeling the struggle between instinct (System 1) and reason (System 2).
-
-### System 1: The Limbic System (Instinct)
-**Module:** `energy.py` - NeuroChemicalEngine
-
-**3-Hormone System:**
-- **Dopamine** (Pleasure/Learning): Rewards progress and novelty
-- **Serotonin** (Meaning/Satisfaction): Activated by meaningful order (Density × Symmetry × Consistency)
-- **Cortisol** (Stress/Survival): Rises from boredom or chaos, triggers panic if too high
-
-### System 2: The Prefrontal Cortex (Reason)
-**Module:** `cortex.py` - PrefrontalCortex
-
-**Capabilities:**
-- **Episodic Memory**: Stores past experiences (State → Action → Outcome)
-- **Willpower**: Finite resource for inhibiting instinctual urges
-- **Conflict Resolution**: Can override System 1's panic/distraction with rational deliberation
-
-### Key Behavioral Features
-
-1. **Panic Inhibition**: When Cortisol > 0.6, System 2 checks if panic helped historically, and uses willpower to "stay calm"
-2. **Impulse Control**: Suppresses distractions (NOISE) when Serotonin is low (no achievement yet)
-3. **Resilience**: Maintains willpower at ~0.95 through balanced regeneration vs. cost
-
-### Emergent Human-Like Behaviors
-- **Stress Management**: Withstands high cortisol without burnout
-- **Delayed Gratification**: Resists cheap dopamine for long-term serotonin
-- **Grit**: Perseveres through difficult states using willpower reserves
-
-**Test Results:**
-- ✅ **Willpower Sustained**: 0.95 (healthy) vs. initial 0.00 (burnout)
-- ✅ **Panic Control**: Successfully inhibits instinctual urges
-- ✅ **Stability**: Runs 1000+ steps without psychological collapse
-
----
-
-## Future Enhancements
-- Multi-environment stress testing
-- "Flow State" detection (High Dopamine + High Serotonin + Low Cortisol)
-- Adaptive willpower regeneration based on rest cycles
+### The Meta-Loop
+While the base agent optimizes for consistency and energy, the **Meta-Learner optimizes for long-term emotional well-being**.
+- It uses **REINFORCE** (Policy Gradient) to maximize the cumulative signal: `Dopamine + Serotonin - Cortisol`.
+- This creates a feedback loop where the agent *learns to learn* in a way that leads to peace (Nirvana) faster.
 
 ---
 
