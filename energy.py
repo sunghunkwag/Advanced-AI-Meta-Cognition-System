@@ -14,7 +14,7 @@ class NeuroChemicalEngine:
         self.serotonin = 0.5  # Satisfaction / Meaning / Order
         self.cortisol = 0.0  # Stress / Boredom / Chaos
         self.dopamine_gain = 1.0
-
+        
         # Internal State Trackers
         self.prev_energy = float("inf")
         self.energy_history = []
@@ -37,7 +37,7 @@ class NeuroChemicalEngine:
         # Triggered by Boredom (No change) or Chaos (High prediction error)
         energy_delta = abs(self.prev_energy - world_energy)
 
-        if energy_delta < 0.001:  # Boredom
+        if energy_delta < 0.001: # Boredom
             self.boredom_counter += 1
             # Increased accumulation rate
             self.cortisol += 0.03 * (self.boredom_counter / 10.0)
@@ -45,8 +45,8 @@ class NeuroChemicalEngine:
             self.boredom_counter = 0
             # Slower decay to allow stress to linger
             self.cortisol -= 0.02
-
-        if prediction_error > 0.6:  # Chaos/Anxiety
+            
+        if prediction_error > 0.6: # Chaos/Anxiety
             self.chaos_counter += 1
             self.cortisol += 0.05  # Reduced from 0.1
         else:

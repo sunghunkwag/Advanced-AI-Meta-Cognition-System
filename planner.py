@@ -35,8 +35,8 @@ class System2Planner:
 
     def _simulate_depth(self, state: torch.Tensor, action_vec: torch.Tensor, cortisol: float, current_depth: int) -> Tuple[float, List[float]]:
         next_state, energy_pred, consistency_pred = self.world_model.simulate(state, action_vec)
-        energy = energy_pred.item() if hasattr(energy_pred, "item") else float(energy_pred)
-        consistency = consistency_pred.item() if hasattr(consistency_pred, "item") else float(consistency_pred)
+        energy = energy_pred.item()
+        consistency = consistency_pred.item()
         panic = self.objective_weights.get("cortisol", 0.0) * cortisol
         objective = self.objective_weights.get("energy", 1.0) * energy - self.objective_weights.get("consistency", 1.0) * consistency + panic
 
