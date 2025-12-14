@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 class World:
     """
@@ -10,6 +11,16 @@ class World:
         self.grid = np.zeros((size, size))
 
     def get_state(self):
+        return self.grid
+
+    def get_state_tensor(self) -> torch.Tensor:
+        """Return the current grid as a torch tensor for models."""
+        return torch.tensor(self.grid, dtype=torch.float32)
+
+    def set_state(self, state: torch.Tensor):
+        """Set grid from a tensor state (used for simulated rollouts)."""
+        array = state.detach().cpu().numpy()
+        self.grid = np.clip(array, 0, 1)
         return self.grid
 
     def apply_action(self, action_dict):

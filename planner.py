@@ -1,89 +1,80 @@
-"""
-Planner Module (System 2)
-
-The "Strategist" of the agent.
-Performs Tree Search (Lookahead) using the Latent World Model (Imagination).
-Finds the action that minimizes predicted energy over a future horizon.
-"""
-
+from dataclasses import dataclass
+from typing import List, Tuple
 import torch
-import math
 
-class TreeSearchPlanner:
-    def __init__(self, world_model, action_decoder, depth: int = 2, num_actions: int = 6):
+
+@dataclass
+class PlanResult:
+    action: dict
+    objective: float
+    score_components: dict
+    trace: List[float]
+
+
+class System2Planner:
+    def __init__(self, world_model, action_encoder, objective_weights=None, depth: int = 2, candidates: int = 6):
         self.world_model = world_model
-        self.action_decoder = action_decoder
+        self.action_encoder = action_encoder
         self.depth = depth
-        self.num_actions = num_actions
-        
-    def plan(self, current_state: torch.Tensor) -> tuple[int, float, str]:
-        """
-        Perform lookahead search to find the best action.
-        
-        Args:
-            current_state: (1, D) Current brain state
-            
-        Returns:
-            best_action_id: The optimal action to take now
-            min_energy: The predicted energy of the best path
-            plan_description: String describing the thought process
-        """
-        best_action_id = -1
-        min_energy = float('inf')
-        best_path = []
-        
-        # Simple Depth-First Search (or Breadth-First) for short horizons
-        # For depth=2, we check Action1 -> Action2
-        
-        print(f"[System 2] Deliberating (Depth {self.depth})...")
-        
-        # We will implement a recursive search
-        best_action_id, min_energy, path_trace = self._search(current_state, current_depth=0)
-        
-        return best_action_id, min_energy, path_trace
+        self.candidates = candidates
+        self.objective_weights = objective_weights or {"energy": 1.0, "consistency": 1.0, "cortisol": 0.0}
 
-    def _search(self, state: torch.Tensor, current_depth: int) -> tuple[int, float, str]:
-        # Base case: if we reached max depth, return 0 energy (or heuristic)
-        # Actually, we want to minimize the CUMULATIVE or FINAL energy.
-        # Let's minimize the energy of the FINAL state in the horizon.
-        
-        if current_depth == self.depth:
-            return -1, 0.0, "" # Action doesn't matter at leaf
-            
-        best_action = -1
-        min_path_energy = float('inf')
-        best_trace = ""
-        
-        # Try all actions
-        for action_id in range(self.num_actions):
-            # 1. Imagine consequences
-            next_state, energy_cost = self.world_model.simulate(state, action_id, self.num_actions)
-            
-            # 2. Recurse
-            if current_depth < self.depth - 1:
-                _, future_energy, sub_trace = self._search(next_state, current_depth + 1)
-                total_energy = energy_cost + future_energy # Cumulative energy? Or just final?
-                # Let's use a discounted sum or just the minimum energy found along the path.
-                # For simplicity: Minimize the Energy of the resulting state + future.
-                # Heuristic: Energy is "Distance to Truth". We want to get closer.
-                # So we want the path that leads to the closest state to Truth.
-                # Let's take the energy of the *final* state as the metric.
-                # But `energy_cost` returned by simulate IS the distance to truth of next_state.
-                # So we want to minimize the minimum energy encountered or the final one.
-                # Let's minimize the energy at the end of the step.
-                
-                # Let's use: Cost = Immediate Energy + Future Energy
-                total_energy = energy_cost + 0.9 * future_energy
-                
-                trace = f"[{action_id}]->{sub_trace}"
-            else:
-                # Leaf node
-                total_energy = energy_cost
-                trace = f"[{action_id}]"
-            
-            if total_energy < min_path_energy:
-                min_path_energy = total_energy
-                best_action = action_id
+    def rollout(self, state: torch.Tensor, candidate_actions: List[dict], cortisol: float = 0.0) -> PlanResult:
+        best_obj = float("inf")
+        best_action = candidate_actions[0]
+        best_trace: List[float] = []
+
+        for action in candidate_actions:
+            encoded = self.action_encoder(action)
+            obj, trace = self._simulate_depth(state, encoded, cortisol, current_depth=0)
+            if obj < best_obj:
+                best_obj = obj
+                best_action = action
                 best_trace = trace
-                
-        return best_action, min_path_energy, best_trace
+        return PlanResult(action=best_action, objective=best_obj, score_components={}, trace=best_trace)
+
+    def _simulate_depth(self, state: torch.Tensor, action_vec: torch.Tensor, cortisol: float, current_depth: int) -> Tuple[float, List[float]]:
+        next_state, energy_pred, consistency_pred = self.world_model.simulate(state, action_vec)
+        energy = energy_pred.item()
+        consistency = consistency_pred.item()
+        panic = self.objective_weights.get("cortisol", 0.0) * cortisol
+        objective = self.objective_weights.get("energy", 1.0) * energy - self.objective_weights.get("consistency", 1.0) * consistency + panic
+
+        trace = [objective]
+        if current_depth + 1 >= self.depth:
+            return objective, trace
+
+        # simple heuristic: reuse same action_vec for deeper rollout to keep compute bounded
+        deeper_obj, deeper_trace = self._simulate_depth(next_state, action_vec, cortisol, current_depth + 1)
+        return objective + 0.9 * deeper_obj, trace + deeper_trace
+
+
+class PrefrontalCortex:
+    def __init__(self, planner: System2Planner, cortisol_threshold: float, consistency_threshold: float, failure_streak: int, enabled: bool = True):
+        self.planner = planner
+        self.cortisol_threshold = cortisol_threshold
+        self.consistency_threshold = consistency_threshold
+        self.failure_streak = failure_streak
+        self.enabled = enabled
+        self.recent_failures: List[float] = []
+        self.interventions = 0
+
+    def should_intervene(self, cortisol: float, consistency: float, energy_delta: float) -> bool:
+        self.recent_failures.append(energy_delta)
+        if len(self.recent_failures) > self.failure_streak:
+            self.recent_failures.pop(0)
+        failure_loop = all(delta >= 0 for delta in self.recent_failures) and len(self.recent_failures) == self.failure_streak
+        if cortisol > self.cortisol_threshold:
+            return True
+        if consistency < self.consistency_threshold:
+            return True
+        if failure_loop:
+            return True
+        return False
+
+    def plan_if_needed(self, state: torch.Tensor, candidate_actions: List[dict], cortisol: float, consistency: float, energy_delta: float) -> Tuple[dict, PlanResult]:
+        if self.enabled and self.should_intervene(cortisol, consistency, energy_delta):
+            result = self.planner.rollout(state, candidate_actions, cortisol)
+            self.interventions += 1
+            return result.action, result
+        return candidate_actions[0], None

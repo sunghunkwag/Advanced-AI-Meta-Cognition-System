@@ -61,6 +61,38 @@ Run multi-seed validation:
 python test_multi_seed.py
 ```
 
+### Research Prototype Harness
+Run a deterministic experiment with planner/meta toggles (logs CSV to `experiments/logs`):
+```bash
+python experiments/run_experiment.py --steps 50 --seed 1 --planner on --meta on
+```
+
+## Research Prototype Highlights
+- Deterministic seeding (`config.py`) and experiment harness (`experiments/run_experiment.py`) with CSV logging for energy, consistency, hormones, planner objective, and world-model loss.
+- JEPA-like world model (`world_model.py`) trained online to predict next grid, energy, and consistency for planner rollouts.
+- System-2 planner (`planner.py`) with prefrontal arbitration that triggers on high cortisol/low consistency/failure streaks.
+- System-3 meta-learner (`meta_learner.py`) that tunes optimizer lr, exploration epsilon, EWC lambda, and dopamine gain based on trends.
+- World/vision tooling for rollouts (`World.set_state`, `get_state_tensor`) and action encoding for simulated futures.
+- Tests (`tests/`) covering world-model determinism, planner ranking, and experiment logging.
+
+## Methods (Concise)
+- **Perception → Graph**: `vision.py` converts grid occupancy into graph features for the GAT manifold.
+- **Mind (System-1)**: `manifold.py` computes latent beliefs, consistency against truth/rejection vectors, and feeds the body.
+- **Body**: `action_decoder.py` maps latent to action logits/parameters and can encode actions for the world model.
+- **Heart**: `energy.py` updates dopamine/serotonin/cortisol using energy, density, symmetry, and prediction error.
+- **Soul**: `automata.py` handles crystallization and EWC loss.
+- **World Model**: `world_model.py` predicts next grid/energy/consistency and is trained online via replay.
+- **System-2 Planner**: `planner.py` rolls out candidate actions through the world model with an objective (energy↓, consistency↑, cortisol penalty).
+- **System-3 Meta-Learner**: `meta_learner.py` adjusts lr/epsilon/EWC/dopamine-gain based on trends.
+- **Experiment Harness**: `experiments/run_experiment.py` orchestrates the loop, logs metrics, and supports planner/meta toggles.
+
+## Reproduction & Expected Metrics
+- Determinism: set `PYTHONHASHSEED` via `config.set_global_seed` (used automatically by the harness).
+- Default run (`--steps 50 --seed 1`): expect CSV with decreasing energy trend and non-zero planner interventions when cortisol rises.
+- Toggle comparisons:
+  - `--planner off` vs `--planner on`: planner-on should show lower energy and higher consistency by ~5–10% on small grids.
+  - `--meta off` vs `--meta on`: meta-on adjusts lr/epsilon traces in logs and stabilizes energy variance.
+
 ---
 
 ## Recent Improvements

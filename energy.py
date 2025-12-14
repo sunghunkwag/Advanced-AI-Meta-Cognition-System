@@ -9,6 +9,7 @@ class NeuroChemicalEngine:
         self.dopamine = 0.5  # Pleasure / Novelty / Learning
         self.serotonin = 0.5 # Satisfaction / Meaning / Order
         self.cortisol = 0.0  # Stress / Boredom / Chaos
+        self.dopamine_gain = 1.0
         
         # Internal State Trackers
         self.prev_energy = float('inf')
@@ -67,7 +68,7 @@ class NeuroChemicalEngine:
             novelty_reward = prediction_error * 2.0
             
         target_dopamine = learning_reward + novelty_reward
-        self.dopamine = self.dopamine * 0.8 + target_dopamine * 0.2
+        self.dopamine = self.dopamine * 0.8 + target_dopamine * 0.2 * self.dopamine_gain
         self.dopamine = np.clip(self.dopamine, 0.0, 1.0)
         
         # 3. Serotonin Dynamics (The Carrot - Meaning)
