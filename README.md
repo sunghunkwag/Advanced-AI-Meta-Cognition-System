@@ -63,60 +63,32 @@ python test_multi_seed.py
 
 ---
 
-## Recent Improvements 
+## Recent Improvements
 
-### Advanced Learning Mechanisms
+### Robust Logic & Soul Alignment
+- **Immutable axioms:** Truth and rejection vectors are now registered as buffers to prevent unintended training drift while keeping them in checkpoints. Logical penalties also discourage trajectories that align with the rejection vector.
+- **True crystallization:** The Fisher Information Matrix is computed during "enlightenment" passes so Elastic Weight Consolidation actively protects learned parameters.
 
-This system has been significantly enhanced with sophisticated learning dynamics:
+### Richer Emotional Feedback
+- **Complete heart inputs:** Density, symmetry, and prediction error now feed the NeuroChemicalEngine, improving dopamine novelty detection and serotonin stability signals.
+- **Balanced cortisol:** Boredom-driven stress accumulates faster and decays more slowly, creating a realistic pressure to explore without immediately resetting.
 
-#### 1. **Epsilon-Greedy Exploration**
-- Decaying exploration rate (0.3 → 0.05) over 1000 steps
-- Prevents premature convergence to local minima
-- Ensures continued action space exploration
+### Learning Stability
+- **Warmup + decay:** The learning rate ramps from 0.001 → 0.01 over the first 20 steps before decaying, avoiding early-step instability.
+- **Extended curriculum:** Early episodes emphasize DRAW and SYMMETRIZE actions (phased guidance through step 50) before moving to epsilon-greedy exploration.
+- **Dropout tuning:** GAT dropout reduced to 0.3 for better capacity without overfitting.
 
-#### 2. **Adaptive Learning Rate**
-- Exponential decay schedule: `lr = 0.01 * (0.95 ** (step // 50))`
-- Enables fast initial learning and fine-grained convergence
-- Optimizes both exploration and exploitation phases
+### Safer Perception & Action
+- **Vision fallback:** Empty scenes now return a stable two-node graph with self-loops to keep GAT attention well-defined.
+- **Action decoding:** Coordinate heads are individually bounded (tanh/sigmoid) for smoother spatial control and scaling.
+- **World validation:** Actions are type-checked and bounded, with DRAW softened to single-pixel strokes plus light blur.
+- **Energy shaping:** Density penalties are moderated and mixed with symmetry scores for a more balanced energy landscape.
 
-#### 3. **Progress-Based Reward Shaping**
-- Tracks energy improvement over sliding window
-- Provides intrinsic bonus for consistent progress
-- Accelerates gradient descent toward optimal solutions
+### Logging & Diagnostics
+- **NaN/Inf guardrails:** Training steps with invalid losses are skipped after printing detailed diagnostics.
+- **Richer logs:** Periodic summaries now include hormone levels, LR, action choice, grid stats, and optional density/symmetry details when crystallization occurs.
 
-#### 4. **Action Diversity Incentive**
-- Monitors recent action distribution
-- Rewards usage of diverse strategies
-- Prevents over-reliance on single action type
-
-#### 5. **Grid Constraints**
-- Value clipping to [0, 1] range prevents overflow
-- Improved density calculation using occupancy ratio
-- Adaptive quadratic penalty for extreme deviations
-
-### Performance Metrics
-
-**Energy Reduction:** 481.76 → 0.06 (**99.8%↓**)  
-**Convergence Speed:** Average 30 steps for successful runs  
-**Success Rate:** 80% across multiple random seeds  
-**Crystallization:** Achieves "Nirvana" state consistently
-
-### Multi-Seed Validation
-
-Tested with 5 different random seeds:
-
-| Seed | Steps | Final Energy | Crystallized | Result |
-|------|-------|--------------|--------------|--------|
-| 42 | 60 | 0.114 | ✅ | Success |
-| 123 | 1000 | 1.500 | ❌ | Failed |
-| 456 | 13 | 0.134 | ✅ | Success |
-| 789 | 27 | 0.188 | ✅ | Success |
-| 2024 | 21 | **0.061** | ✅ | **Best** |
-
-**Statistical Summary:**
-- Successful runs: 80% (4/5)
-- Average steps (successful): 30.3 ± 20.4
-- Average energy (successful): 0.124 ± 0.053
+These refinements collectively produce a more stable, interpretable agent whose internal drives, crystallization events, and world interactions are easier to monitor and control.
 
 ---
 
