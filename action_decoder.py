@@ -33,9 +33,16 @@ class ActionDecoder(nn.Module):
 
         # Head 1
         action_logits = self.action_head(x)
-        
+
         # Head 2
-        params = torch.tanh(self.param_head(x)) # Bound to [-1, 1]
+        params_raw = self.param_head(x)
+
+        x_coord = torch.tanh(params_raw[:, 0:1])
+        y_coord = torch.tanh(params_raw[:, 1:2])
+        scale = torch.sigmoid(params_raw[:, 2:3])
+        extra = torch.tanh(params_raw[:, 3:4])
+
+        params = torch.cat([x_coord, y_coord, scale, extra], dim=1)
         
         return action_logits, params
 
