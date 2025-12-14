@@ -21,10 +21,12 @@ class VisionSystem:
         # 1. Object Extraction (Simplified: Non-zero pixels are objects)
         # In a real system, this would be a CNN.
         objects = np.argwhere(world_state > 0)
-        
+
         if len(objects) == 0:
-            # Return dummy graph if empty
-            return torch.zeros((1, 3)), torch.zeros((1, 1))
+            # Return minimal stable graph (2 nodes with self-loops)
+            dummy_nodes = torch.zeros((2, 3), dtype=torch.float32)
+            dummy_adj = torch.eye(2, dtype=torch.float32)
+            return dummy_nodes, dummy_adj
 
         # Normalize coordinates to [-1, 1]
         h, w = world_state.shape

@@ -16,31 +16,39 @@ class IntrinsicAutomata:
     def is_crystallized(self):
         return self.crystallized
 
-    def crystallize(self, dataset_iterator):
+    def crystallize(self, nodes, adj):
         """
         Freeze the current knowledge by computing the Fisher Information Matrix.
         This corresponds to 'Meditation' or 'Enlightenment'.
+
+        Args:
+            nodes: Current graph nodes (from vision system)
+            adj: Current adjacency matrix
         """
         if self.crystallized:
             return
-            
+
         print("[SOUL] Crystallizing Knowledge (EWC)...")
         self.model.eval()
-        
-        # Initialize Fisher Matrix
+
         for name, param in self.model.named_parameters():
             self.optpar[name] = param.data.clone()
             self.fisher_matrix[name] = torch.zeros_like(param.data)
 
-        # Compute Fisher (Simplified: Gradients squared)
-        # In a real scenario, we'd iterate over some memory buffer
-        # Here we assume the current state is the 'truth'
         self.model.zero_grad()
-        
-        # Dummy forward pass to get gradients (Conceptual)
-        # In practice, we need real data samples here.
-        # For this simulation, we'll just lock the weights as they are.
-        
+
+        z = self.model(nodes, adj)
+        consistency = self.model.check_consistency(z)
+
+        consistency.backward()
+
+        for name, param in self.model.named_parameters():
+            if param.grad is not None:
+                self.fisher_matrix[name] = param.grad.data.clone() ** 2
+            else:
+                self.fisher_matrix[name] = torch.zeros_like(param.data)
+
+        self.model.train()
         self.crystallized = True
         print("[SOUL] Crystallization Complete. Weights are now resistant to change.")
 
@@ -61,12 +69,12 @@ class IntrinsicAutomata:
                 loss += (self.ewc_lambda / 2) * torch.sum((param - optpar) ** 2)
         return loss
 
-    def update_state(self, hormone_state):
+    def update_state(self, hormone_state, nodes, adj):
         """
         Decide whether to crystallize based on the Heart's state.
         """
         dopamine, serotonin = hormone_state
-        
+
         # If Serotonin (Peace) is very high, crystallize
         if serotonin > 0.9 and not self.crystallized:
-            self.crystallize(None)
+            self.crystallize(nodes, adj)
