@@ -143,7 +143,7 @@ class ASIAgent:
         action_embedding = F.one_hot(torch.tensor([action_id]), num_classes=6).float()
         action_embedding = F.pad(action_embedding, (0, 26))
         
-        z_pred = self.predictor(z_t, action_embedding)
+        z_pred, pred_energy, pred_consistency = self.predictor(z_t, action_embedding)
         
         # Energy components
         pred_error = F.mse_loss(z_pred, z_t1)

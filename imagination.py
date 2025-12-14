@@ -41,9 +41,8 @@ class LatentWorldModel(nn.Module):
             action_embedding = F.pad(action_embedding, (0, padding_size))
             
         # Predict next state
-        # z_pred = Predictor(z_t, action)
         with torch.no_grad():
-            predicted_next_state = self.predictor(current_state, action_embedding)
+            predicted_next_state, _, _ = self.predictor(current_state, action_embedding)
             
         # Calculate expected energy (Distance to Truth)
         # We don't know the actual next state, so we use the predicted one to estimate "Truth Alignment"
