@@ -41,7 +41,13 @@ def main():
     vision = VisionSystem()
     LATENT_DIM = 8
     v_id, v_truth, v_rej = get_soul_vectors(dim=LATENT_DIM)
-    mind = GraphAttentionManifold(nfeat=3, nhid=16, nclass=LATENT_DIM, truth_vector=v_truth)
+    mind = GraphAttentionManifold(
+        nfeat=3,
+        nhid=16,
+        nclass=LATENT_DIM,
+        truth_vector=v_truth,
+        reject_vector=v_rej
+    )
     body = ActionDecoder(latent_dim=LATENT_DIM)
     soul = IntrinsicAutomata(mind)
     

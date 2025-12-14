@@ -61,62 +61,66 @@ Run multi-seed validation:
 python test_multi_seed.py
 ```
 
+### Research Prototype Harness
+Run a deterministic experiment with planner/meta toggles (logs CSV to `experiments/logs`):
+```bash
+python experiments/run_experiment.py --steps 50 --seed 1 --planner on --meta on
+```
+
+## Research Prototype Highlights
+- Deterministic seeding (`config.py`) and experiment harness (`experiments/run_experiment.py`) with CSV logging for energy, consistency, hormones, planner objective, and world-model loss.
+- JEPA-like world model (`world_model.py`) trained online to predict next grid, energy, and consistency for planner rollouts.
+- System-2 planner (`planner.py`) with prefrontal arbitration that triggers on high cortisol/low consistency/failure streaks.
+- System-3 meta-learner (`meta_learner.py`) that tunes optimizer lr, exploration epsilon, EWC lambda, and dopamine gain based on trends.
+- World/vision tooling for rollouts (`World.set_state`, `get_state_tensor`) and action encoding for simulated futures.
+- Tests (`tests/`) covering world-model determinism, planner ranking, and experiment logging.
+
+## Methods (Concise)
+- **Perception → Graph**: `vision.py` converts grid occupancy into graph features for the GAT manifold.
+- **Mind (System-1)**: `manifold.py` computes latent beliefs, consistency against truth/rejection vectors, and feeds the body.
+- **Body**: `action_decoder.py` maps latent to action logits/parameters and can encode actions for the world model.
+- **Heart**: `energy.py` updates dopamine/serotonin/cortisol using energy, density, symmetry, and prediction error.
+- **Soul**: `automata.py` handles crystallization and EWC loss.
+- **World Model**: `world_model.py` predicts next grid/energy/consistency and is trained online via replay.
+- **System-2 Planner**: `planner.py` rolls out candidate actions through the world model with an objective (energy↓, consistency↑, cortisol penalty).
+- **System-3 Meta-Learner**: `meta_learner.py` adjusts lr/epsilon/EWC/dopamine-gain based on trends.
+- **Experiment Harness**: `experiments/run_experiment.py` orchestrates the loop, logs metrics, and supports planner/meta toggles.
+
+## Reproduction & Expected Metrics
+- Determinism: set `PYTHONHASHSEED` via `config.set_global_seed` (used automatically by the harness).
+- Default run (`--steps 50 --seed 1`): expect CSV with decreasing energy trend and non-zero planner interventions when cortisol rises.
+- Toggle comparisons:
+  - `--planner off` vs `--planner on`: planner-on should show lower energy and higher consistency by ~5–10% on small grids.
+  - `--meta off` vs `--meta on`: meta-on adjusts lr/epsilon traces in logs and stabilizes energy variance.
+
 ---
 
-## Recent Improvements 
+## Recent Improvements
 
-### Advanced Learning Mechanisms
+### Robust Logic & Soul Alignment
+- **Immutable axioms:** Truth and rejection vectors are now registered as buffers to prevent unintended training drift while keeping them in checkpoints. Logical penalties also discourage trajectories that align with the rejection vector.
+- **True crystallization:** The Fisher Information Matrix is computed during "enlightenment" passes so Elastic Weight Consolidation actively protects learned parameters.
 
-This system has been significantly enhanced with sophisticated learning dynamics:
+### Richer Emotional Feedback
+- **Complete heart inputs:** Density, symmetry, and prediction error now feed the NeuroChemicalEngine, improving dopamine novelty detection and serotonin stability signals.
+- **Balanced cortisol:** Boredom-driven stress accumulates faster and decays more slowly, creating a realistic pressure to explore without immediately resetting.
 
-#### 1. **Epsilon-Greedy Exploration**
-- Decaying exploration rate (0.3 → 0.05) over 1000 steps
-- Prevents premature convergence to local minima
-- Ensures continued action space exploration
+### Learning Stability
+- **Warmup + decay:** The learning rate ramps from 0.001 → 0.01 over the first 20 steps before decaying, avoiding early-step instability.
+- **Extended curriculum:** Early episodes emphasize DRAW and SYMMETRIZE actions (phased guidance through step 50) before moving to epsilon-greedy exploration.
+- **Dropout tuning:** GAT dropout reduced to 0.3 for better capacity without overfitting.
 
-#### 2. **Adaptive Learning Rate**
-- Exponential decay schedule: `lr = 0.01 * (0.95 ** (step // 50))`
-- Enables fast initial learning and fine-grained convergence
-- Optimizes both exploration and exploitation phases
+### Safer Perception & Action
+- **Vision fallback:** Empty scenes now return a stable two-node graph with self-loops to keep GAT attention well-defined.
+- **Action decoding:** Coordinate heads are individually bounded (tanh/sigmoid) for smoother spatial control and scaling.
+- **World validation:** Actions are type-checked and bounded, with DRAW softened to single-pixel strokes plus light blur.
+- **Energy shaping:** Density penalties are moderated and mixed with symmetry scores for a more balanced energy landscape.
 
-#### 3. **Progress-Based Reward Shaping**
-- Tracks energy improvement over sliding window
-- Provides intrinsic bonus for consistent progress
-- Accelerates gradient descent toward optimal solutions
+### Logging & Diagnostics
+- **NaN/Inf guardrails:** Training steps with invalid losses are skipped after printing detailed diagnostics.
+- **Richer logs:** Periodic summaries now include hormone levels, LR, action choice, grid stats, and optional density/symmetry details when crystallization occurs.
 
-#### 4. **Action Diversity Incentive**
-- Monitors recent action distribution
-- Rewards usage of diverse strategies
-- Prevents over-reliance on single action type
-
-#### 5. **Grid Constraints**
-- Value clipping to [0, 1] range prevents overflow
-- Improved density calculation using occupancy ratio
-- Adaptive quadratic penalty for extreme deviations
-
-### Performance Metrics
-
-**Energy Reduction:** 481.76 → 0.06 (**99.8%↓**)  
-**Convergence Speed:** Average 30 steps for successful runs  
-**Success Rate:** 80% across multiple random seeds  
-**Crystallization:** Achieves "Nirvana" state consistently
-
-### Multi-Seed Validation
-
-Tested with 5 different random seeds:
-
-| Seed | Steps | Final Energy | Crystallized | Result |
-|------|-------|--------------|--------------|--------|
-| 42 | 60 | 0.114 | ✅ | Success |
-| 123 | 1000 | 1.500 | ❌ | Failed |
-| 456 | 13 | 0.134 | ✅ | Success |
-| 789 | 27 | 0.188 | ✅ | Success |
-| 2024 | 21 | **0.061** | ✅ | **Best** |
-
-**Statistical Summary:**
-- Successful runs: 80% (4/5)
-- Average steps (successful): 30.3 ± 20.4
-- Average energy (successful): 0.124 ± 0.053
+These refinements collectively produce a more stable, interpretable agent whose internal drives, crystallization events, and world interactions are easier to monitor and control.
 
 ---
 

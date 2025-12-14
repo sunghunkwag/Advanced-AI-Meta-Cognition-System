@@ -9,6 +9,7 @@ class NeuroChemicalEngine:
         self.dopamine = 0.5  # Pleasure / Novelty / Learning
         self.serotonin = 0.5 # Satisfaction / Meaning / Order
         self.cortisol = 0.0  # Stress / Boredom / Chaos
+        self.dopamine_gain = 1.0
         
         # Internal State Trackers
         self.prev_energy = float('inf')
@@ -31,14 +32,15 @@ class NeuroChemicalEngine:
         # 1. Cortisol Dynamics (The Stick)
         # Triggered by Boredom (No change) or Chaos (High prediction error)
         energy_delta = abs(self.prev_energy - world_energy)
-        
+
         if energy_delta < 0.001: # Boredom
             self.boredom_counter += 1
-            # Dampened accumulation: 0.05 -> 0.02
-            self.cortisol += 0.02 * (self.boredom_counter / 10.0) 
+            # Increased accumulation rate
+            self.cortisol += 0.03 * (self.boredom_counter / 10.0)
         else:
             self.boredom_counter = 0
-            self.cortisol -= 0.05 # Slower decay (lingering stress)
+            # Slower decay to allow stress to linger
+            self.cortisol -= 0.02
             
         if prediction_error > 0.6: # Chaos/Anxiety
             self.chaos_counter += 1
@@ -66,7 +68,7 @@ class NeuroChemicalEngine:
             novelty_reward = prediction_error * 2.0
             
         target_dopamine = learning_reward + novelty_reward
-        self.dopamine = self.dopamine * 0.8 + target_dopamine * 0.2
+        self.dopamine = self.dopamine * 0.8 + target_dopamine * 0.2 * self.dopamine_gain
         self.dopamine = np.clip(self.dopamine, 0.0, 1.0)
         
         # 3. Serotonin Dynamics (The Carrot - Meaning)
