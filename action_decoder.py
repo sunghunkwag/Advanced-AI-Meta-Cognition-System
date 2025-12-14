@@ -11,6 +11,7 @@ class ActionDecoder(nn.Module):
     def __init__(self, latent_dim, output_dim=4):
         super(ActionDecoder, self).__init__()
         self.latent_dim = latent_dim
+        self.num_actions = output_dim
         
         # Shared trunk
         self.fc1 = nn.Linear(latent_dim, 64)
@@ -18,7 +19,7 @@ class ActionDecoder(nn.Module):
 
         # Head 1: Action Logits (What to do)
         # 0: Draw, 1: Symmetrize, 2: Clear, 3: Noise
-        self.action_head = nn.Linear(64, 4)
+        self.action_head = nn.Linear(64, output_dim)
 
         # Head 2: Action Parameters (Where/How)
         # [x, y, scale, axis/variant]
@@ -33,9 +34,16 @@ class ActionDecoder(nn.Module):
 
         # Head 1
         action_logits = self.action_head(x)
-        
+
         # Head 2
-        params = torch.tanh(self.param_head(x)) # Bound to [-1, 1]
+        params_raw = self.param_head(x)
+
+        x_coord = torch.tanh(params_raw[:, 0:1])
+        y_coord = torch.tanh(params_raw[:, 1:2])
+        scale = torch.sigmoid(params_raw[:, 2:3])
+        extra = torch.tanh(params_raw[:, 3:4])
+
+        params = torch.cat([x_coord, y_coord, scale, extra], dim=1)
         
         return action_logits, params
 
@@ -55,6 +63,18 @@ class ActionDecoder(nn.Module):
             "type": action_type,
             "x": x,
             "y": y,
-            "p3": p3, # Scale or Axis
-            "p4": p4  # Extra param
+            "scale": p3, # Scale or Axis
+            "extra": p4  # Extra param
         }
+
+    def encode_action(self, action: dict) -> torch.Tensor:
+        """Encode an action dict into vector for world model."""
+        action_map = {"DRAW": 0, "SYMMETRIZE": 1, "CLEAR": 2, "NOISE": 3}
+        vec = torch.zeros(self.num_actions + 4)
+        idx = action_map.get(action.get("type", "DRAW"), 0)
+        vec[idx] = 1.0
+        vec[self.num_actions + 0] = float(action.get("x", 0.0))
+        vec[self.num_actions + 1] = float(action.get("y", 0.0))
+        vec[self.num_actions + 2] = float(action.get("scale", 0.0))
+        vec[self.num_actions + 3] = float(action.get("extra", 0.0))
+        return vec

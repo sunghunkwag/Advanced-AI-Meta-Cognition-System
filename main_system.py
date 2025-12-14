@@ -23,7 +23,13 @@ def main():
     # Initialize Mind with Soul
     LATENT_DIM = 8
     v_id, v_truth, v_rej = get_soul_vectors(dim=LATENT_DIM)
-    mind = GraphAttentionManifold(nfeat=3, nhid=16, nclass=LATENT_DIM, truth_vector=v_truth)
+    mind = GraphAttentionManifold(
+        nfeat=3,
+        nhid=16,
+        nclass=LATENT_DIM,
+        truth_vector=v_truth,
+        reject_vector=v_rej
+    )
     
     # Initialize Body
     body = ActionDecoder(latent_dim=LATENT_DIM)
@@ -61,29 +67,47 @@ def main():
             world_energy = world.calculate_energy()
             
             # === HEART (Emotions) ===
-            heart.update(world_energy, consistency.item())
-            dopamine, serotonin = heart.get_hormones()
-            state_mode = heart.get_state()
-            
+            density = np.sum(world_state > 0.1) / world_state.size
+            h_sym = 1.0 - np.abs(world_state - np.fliplr(world_state)).mean()
+            v_sym = 1.0 - np.abs(world_state - np.flipud(world_state)).mean()
+            symmetry = (h_sym + v_sym) / 2.0
+            prediction_error = 1.0 - consistency.item()
+
+            heart.update(world_energy, consistency.item(), density, symmetry, prediction_error)
+            hormones = heart.get_hormones()
+            dopamine = hormones['dopamine']
+            serotonin = hormones['serotonin']
+            cortisol = hormones['cortisol']
+
             # === SOUL (Crystallization Check) ===
-            soul.update_state((dopamine, serotonin))
+            soul.update_state((dopamine, serotonin), nodes, adj)
             ewc_loss = soul.ewc_loss(mind)
             
             # === BODY (Action Selection) ===
             action_logits, params = body(z)
             
-            # CURRICULUM: Force DRAW in early steps to bootstrap
-            if step <= 10:
-                action_logits = torch.zeros_like(action_logits)
-                action_logits[0, 0] = 10.0  # Force DRAW
-            elif step <= 20:
-                # 50% forced DRAW
+            # CURRICULUM: Extended bootstrap phase
+            if step <= 30:
+                # Phase 1: Pure DRAW (0-20)
+                if step <= 20:
+                    action_logits = torch.zeros_like(action_logits)
+                    action_logits[0, 0] = 10.0  # Force DRAW
+                # Phase 2: DRAW + SYMMETRIZE (21-30)
+                else:
+                    if np.random.rand() < 0.7:
+                        action_logits = torch.zeros_like(action_logits)
+                        if np.random.rand() < 0.5:
+                            action_logits[0, 0] = 10.0
+                        else:
+                            action_logits[0, 1] = 10.0
+            elif step <= 50:
+                # Phase 3: Guided exploration (31-50)
                 if np.random.rand() < 0.5:
                     action_logits = torch.zeros_like(action_logits)
-                    action_logits[0, 0] = 10.0
+                    action_logits[0, np.random.choice([0, 1, 2])] = 10.0
             else:
                 # === EPSILON-GREEDY EXPLORATION ===
-                epsilon = max(0.3 * (1 - step/1000), 0.05)  # Decay 0.3 -> 0.05
+                epsilon = max(0.3 * (1 - (step-50)/950), 0.05)
                 if np.random.rand() < epsilon:
                     # Random action selection
                     action_logits = torch.randn_like(action_logits)
@@ -95,9 +119,12 @@ def main():
             world.apply_action(action)
             
             # === LEARNING (Backpropagation) ===
-            # Loss = World Energy + (1 - Consistency) + EWC
+            consistency = mind.check_consistency(z)
+            rejection_penalty = mind.check_rejection(z)
+
             loss = torch.tensor(world_energy, dtype=torch.float32)
             loss = loss + (1.0 - consistency)
+            loss = loss + (rejection_penalty * 0.5)
             loss = loss + ewc_loss
             
             # === REWARD SHAPING ===
@@ -117,13 +144,31 @@ def main():
                 diversity_bonus = (unique_actions - 2) * 0.02  # Bonus for using 3-4 different actions
                 loss = loss - torch.tensor(diversity_bonus, dtype=torch.float32)
             
-            # === ADAPTIVE LEARNING RATE ===
-            lr = 0.01 * (0.95 ** (step // 50))  # Exponential decay
+            # === ADAPTIVE LEARNING RATE WITH WARMUP ===
+            warmup_steps = 20
+            if step <= warmup_steps:
+                lr = 0.001 + (0.01 - 0.001) * (step / warmup_steps)
+            else:
+                lr = 0.01 * (0.95 ** ((step - warmup_steps) // 50))
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
-            
+
+            # Safety check for NaN/Inf
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"[ERROR] Invalid loss at step {step}: {loss.item()}")
+                print(f"  - world_energy: {world_energy}")
+                print(f"  - consistency: {consistency.item()}")
+                print(f"  - ewc_loss: {ewc_loss.item()}")
+                # Skip this step
+                continue
+
             optimizer.zero_grad()
             loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(
+                list(mind.parameters()) + list(body.parameters()),
+                max_norm=1.0
+            )
             optimizer.step()
             
             # Track best energy
@@ -131,15 +176,22 @@ def main():
                 best_energy = world_energy
             
             # === LOGGING ===
-            if step % 50 == 1 or step <= 50:  # Log every 50 steps or first 50
-                print(f"Step {step:03d} | {state_mode:5s} | "
-                      f"D:{dopamine:.2f} S:{serotonin:.2f} | "
+            if step % 50 == 1 or step <= 50:
+                print(f"Step {step:04d} | "
                       f"E:{world_energy:.4f} | "
+                      f"Cons:{consistency.item():.3f} | "
+                      f"D:{dopamine:.2f} S:{serotonin:.2f} C:{cortisol:.2f} | "
                       f"L:{loss.item():.4f} | "
                       f"LR:{lr:.5f} | "
-                      f"{action['type']:10s} | "
-                      f"Grid:{world.grid.sum():.1f}")
-            
+                      f"Act:{action['type']:10s} | "
+                      f"Grid:Σ={world.grid.sum():.1f} Max={world.grid.max():.2f}")
+
+                if step % 100 == 0:
+                    print(f"  └─ Details: Density={density:.3f}, Symmetry={symmetry:.3f}, "
+                          f"PredErr={prediction_error:.3f}")
+                    if soul.is_crystallized():
+                        print(f"  └─ [SOUL] Crystallized (EWC Active)")
+
             # === CHECK CRYSTALLIZATION ===
             if soul.is_crystallized():
                 print("\n" + "="*60)

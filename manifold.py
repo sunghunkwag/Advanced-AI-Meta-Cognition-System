@@ -46,7 +46,7 @@ class GraphAttentionManifold(nn.Module):
     The Mind.
     Uses Graph Attention Networks (GAT) to reason about relationships.
     """
-    def __init__(self, nfeat, nhid, nclass, dropout=0.6, alpha=0.2, nheads=2, truth_vector=None):
+    def __init__(self, nfeat, nhid, nclass, dropout=0.3, alpha=0.2, nheads=2, truth_vector=None, reject_vector=None):
         super(GraphAttentionManifold, self).__init__()
         self.dropout = dropout
 
@@ -59,9 +59,14 @@ class GraphAttentionManifold(nn.Module):
         # Axiom Injection: Truth Vector
         # This represents the "ideal" logical state or consistency check
         if truth_vector is not None:
-            self.truth_vector = nn.Parameter(truth_vector)
+            self.register_buffer('truth_vector', truth_vector)
         else:
-            self.truth_vector = nn.Parameter(torch.randn(nclass))
+            self.register_buffer('truth_vector', torch.randn(nclass))
+
+        if reject_vector is not None:
+            self.register_buffer('reject_vector', reject_vector)
+        else:
+            self.register_buffer('reject_vector', torch.randn(nclass))
 
     def forward(self, x, adj):
         x = F.dropout(x, self.dropout, training=self.training)
@@ -83,3 +88,12 @@ class GraphAttentionManifold(nn.Module):
         target = self.truth_vector.unsqueeze(0)
         similarity = F.cosine_similarity(z, target, dim=1)
         return (similarity + 1) / 2  # Normalize to [0, 1]
+
+    def check_rejection(self, z):
+        """
+        Measure distance from rejection vector (contradictions, fallacies).
+        Returns penalty score (0 to 1), higher = closer to bad states.
+        """
+        target = self.reject_vector.unsqueeze(0)
+        similarity = F.cosine_similarity(z, target, dim=1)
+        return (similarity + 1) / 2
