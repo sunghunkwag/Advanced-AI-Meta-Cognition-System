@@ -61,12 +61,19 @@ class GraphAttentionManifold(nn.Module):
         if truth_vector is not None:
             self.register_buffer('truth_vector', truth_vector)
         else:
-            self.register_buffer('truth_vector', torch.randn(nclass))
+            self.register_buffer('truth_vector', torch.zeros(nclass))
 
         if reject_vector is not None:
             self.register_buffer('reject_vector', reject_vector)
         else:
             self.register_buffer('reject_vector', torch.randn(nclass))
+
+    def update_truth_vector(self, truth_vector: torch.Tensor) -> None:
+        """Update the registered truth vector dynamically from grid measurements."""
+        if truth_vector.shape[-1] != self.truth_vector.shape[-1]:
+            raise ValueError(f"Expected truth vector of shape ({self.truth_vector.shape[-1]},), got {truth_vector.shape}")
+        with torch.no_grad():
+            self.truth_vector.copy_(truth_vector)
 
     def forward(self, x, adj):
         x = F.dropout(x, self.dropout, training=self.training)
