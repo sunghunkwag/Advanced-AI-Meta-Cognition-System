@@ -47,6 +47,11 @@ class World:
         x = action_dict.get('x', 0)
         y = action_dict.get('y', 0)
 
+        if not np.isfinite(x):
+            x = 0.0
+        if not np.isfinite(y):
+            y = 0.0
+
         c = int((x + 1) / 2 * (self.size - 1))
         r = int((y + 1) / 2 * (self.size - 1))
         
