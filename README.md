@@ -55,15 +55,12 @@ Run the basic system:
 python main_system.py
 ```
 
-Run the Dual-Process (Instinct vs Reason) system:
-```bash
-python main_system_dual.py
-```
-
 Run multi-seed validation:
 ```bash
 python test_multi_seed.py
 ```
+
+**Legacy snapshots:** `main_system_dual.py` and `main_asi.py` are historical experiments that reference missing modules and mismatched APIs. They are kept for archival context only and are not runnable in the current checkout.
 
 ### Research Prototype Harness
 Run a deterministic experiment with planner/meta toggles (logs CSV to `experiments/logs`):
@@ -117,7 +114,7 @@ This generates:
 ## Research Prototype Highlights
 - Deterministic seeding (`config.py`) and experiment harness (`experiments/run_experiment.py`) with CSV logging for energy, consistency, hormones, planner objective, and world-model loss.
 - JEPA-like world model (`world_model.py`) trained online to predict next grid, energy, and consistency for planner rollouts.
-- System-2 planner (`planner.py`) with prefrontal arbitration that triggers on high cortisol/low consistency/failure streaks.
+- System-2 planner (`planner.py`) with a Planning Arbiter (previously named `PrefrontalCortex`) that triggers on high cortisol/low consistency/failure streaks while staying distinct from the willpower/episodic-memory PFC in `cortex.py`.
 - System-3 meta-learner (`meta_learner.py`) that tunes optimizer lr, exploration epsilon, EWC lambda, and dopamine gain based on trends.
 - World/vision tooling for rollouts (`World.set_state`, `get_state_tensor`) and action encoding for simulated futures.
 - Tests (`tests/`) covering world-model determinism, planner ranking, and experiment logging.

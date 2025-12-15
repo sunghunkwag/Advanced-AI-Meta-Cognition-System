@@ -103,6 +103,8 @@ class IntrinsicAutomata:
         adj,
         energy_history=None,
         consistency_history=None,
+        hormone_history=None,
+        ratio_window: int = 50,
         step: int = 0,
     ):
         """
@@ -110,11 +112,12 @@ class IntrinsicAutomata:
         Multi-criteria triggers model the "checkpoint" concept:
         - Checkpoint A: Energy drops below half of the starting level
         - Checkpoint B: High consistency sustained for 20 steps
-        - Checkpoint C: Stable dopamine/serotonin ratio
+        - Checkpoint C: Stable dopamine/serotonin ratio (computed from ``hormone_history``)
         """
         dopamine, serotonin = hormone_state
         energy_history = energy_history or []
         consistency_history = consistency_history or []
+        hormone_history = hormone_history or []
 
         if not energy_history:
             return
@@ -129,12 +132,9 @@ class IntrinsicAutomata:
         )
 
         ratio_history = []
-        if len(consistency_history) >= 50:
-            # Proxy ratio stability using last 50 serotonin values normalized by dopamine
-            ratio_history = [
-                (consistency_history[i] if abs(dopamine) < 1e-3 else serotonin / (dopamine + 1e-3))
-                for i in range(-50, 0)
-            ]
+        if len(hormone_history) >= ratio_window:
+            window = hormone_history[-ratio_window:]
+            ratio_history = [ser / (dop + 1e-3) for dop, ser in window]
         ratio_stable = bool(ratio_history) and (torch.tensor(ratio_history).std().item() < 0.1)
 
         if energy_threshold_hit and "A" not in self.ewc_tasks:

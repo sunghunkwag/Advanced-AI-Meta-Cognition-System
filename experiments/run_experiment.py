@@ -13,7 +13,7 @@ from config import DEFAULT_CONFIG, ExperimentConfig, set_global_seed
 from energy import NeuroChemicalEngine
 from manifold import GraphAttentionManifold
 from meta_learner import MetaLearner
-from planner import PrefrontalCortex, System2Planner
+from planner import PlanningArbiter, System2Planner
 from soul import get_soul_vectors
 from vision import VisionSystem
 from world import World
@@ -55,8 +55,10 @@ def run(cfg: ExperimentConfig):
     world_model = WorldModel(grid_size=cfg.grid_size, action_dim=action_dim)
     world_model_trainer = WorldModelTrainer(world_model)
 
-    planner = System2Planner(world_model, action_encoder=body.encode_action, depth=cfg.planner.depth, candidates=cfg.planner.candidates)
-    prefrontal = PrefrontalCortex(
+    planner = System2Planner(
+        world_model, action_encoder=body.encode_action, depth=cfg.planner.depth, candidates=cfg.planner.candidates
+    )
+    prefrontal = PlanningArbiter(
         planner,
         cfg.planner.cortisol_override,
         cfg.planner.consistency_override,
@@ -90,6 +92,7 @@ def run(cfg: ExperimentConfig):
         energy_history: List[float] = []
         consistency_history: List[float] = []
         action_history: List[str] = []
+        hormone_history: List[Tuple[float, float]] = []
 
         for step in range(1, cfg.steps + 1):
             state = torch.tensor(world.get_state(), dtype=torch.float32)
@@ -97,6 +100,9 @@ def run(cfg: ExperimentConfig):
             z = mind(nodes, adj)
             consistency = mind.check_consistency(z)
             energy = world.calculate_energy()
+
+            energy_history.append(energy)
+            consistency_history.append(consistency.item())
 
             density = np.sum(world.grid > 0.1) / world.grid.size
             h_sym = 1.0 - np.abs(world.grid - np.fliplr(world.grid)).mean()
@@ -110,7 +116,15 @@ def run(cfg: ExperimentConfig):
             serotonin = hormones["serotonin"]
             cortisol = hormones["cortisol"]
 
-            soul.update_state((dopamine, serotonin), nodes, adj)
+            hormone_history.append((dopamine, serotonin))
+            soul.update_state(
+                (dopamine, serotonin),
+                nodes,
+                adj,
+                energy_history=energy_history,
+                consistency_history=consistency_history,
+                hormone_history=hormone_history,
+            )
             soul.ewc_lambda = ewc_lambda_ref["lambda"]
             ewc_loss = soul.ewc_loss(mind)
 
@@ -145,12 +159,12 @@ def run(cfg: ExperimentConfig):
             loss.backward()
             optimizer.step()
 
-            energy_history.append(energy)
-            consistency_history.append(consistency.item())
             if len(energy_history) > 20:
                 energy_history.pop(0)
             if len(consistency_history) > 20:
                 consistency_history.pop(0)
+            if len(hormone_history) > 50:
+                hormone_history.pop(0)
 
             energy_trend = 0.0
             if len(energy_history) >= 5:
