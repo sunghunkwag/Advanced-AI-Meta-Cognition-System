@@ -16,12 +16,6 @@ from pathlib import Path
 from typing import Callable, Dict, List
 
 import numpy as np
-import sys
-
-# Ensure repository root is on the import path when running as a script
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 
 from config import set_global_seed
 from environment_manager_arc import load_mini_arc_suite
