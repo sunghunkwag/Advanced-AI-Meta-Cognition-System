@@ -229,9 +229,7 @@ The system now implements a **biologically-inspired Dual-Process Architecture**,
 
 ---
 
-**Architect:** User (The Director)  
-**Engineer:** Gemini (The Builder)  
-**Status:** ✅ Verified & Functional
+
 
 ## Citation
 
