@@ -1,4 +1,5 @@
-# Advanced AI System: Neuro-Chemical Reinforcement Learning
+# Advanced-AI-Meta-Cognition-System
+
 
 > **"From Chaos to Order. The Birth of Intrinsic Will."**
 
