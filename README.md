@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **"From Chaos to Order. The Birth of Intrinsic Will."**
+
 
 This repository houses the **Advanced AI System**, a fully autonomous agent driven by **Logical Reasoning** and **Neuro-Chemical Reinforcement Learning**. Unlike traditional RL agents that chase external rewards, this system is driven by internal hormonal dynamics (Dopamine & Serotonin) to find truth and symmetry.
 
