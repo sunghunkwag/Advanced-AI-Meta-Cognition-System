@@ -93,16 +93,23 @@ python experiments/run_experiment.py --steps 50 --seed 1 --planner on --meta on
   - `--planner off` vs `--planner on`: planner-on should show lower energy and higher consistency by ~5–10% on small grids.
   - `--meta off` vs `--meta on`: meta-on adjusts lr/epsilon traces in logs and stabilizes energy variance.
 
+## Validation & Testing
+- Core regression suite: `pytest` (covers JEPA predictor determinism, planner ranking, neurochemical gradients, truth-vector symmetry drift, and world-model rollouts).
+- After the latest changes, all tests pass locally (`pytest` completes in under 10s on CPU), confirming hormone-integrated policy gradients and deterministic truth alignment remain stable.
+
 ---
 
 ## Recent Improvements
 
 ### Robust Logic & Soul Alignment
-- **Immutable axioms:** Truth and rejection vectors are now registered as buffers to prevent unintended training drift while keeping them in checkpoints. Logical penalties also discourage trajectories that align with the rejection vector.
+- **Deterministic truth vectors from the grid:** `compute_truth_vector` now derives 32D truth features directly from the current grid (symmetry, density uniformity, edge connectivity, spatial coherence) instead of random initialization, and `manifold.py` refreshes alignment against this live target during rollout.
+- **Immutable axioms:** Truth and rejection vectors are registered as buffers to keep checkpoints stable while logical penalties discourage trajectories aligning with the rejection vector.
 - **True crystallization:** The Fisher Information Matrix is computed during "enlightenment" passes so Elastic Weight Consolidation actively protects learned parameters.
 
 ### Richer Emotional Feedback
-- **Complete heart inputs:** Density, symmetry, and prediction error now feed the NeuroChemicalEngine, improving dopamine novelty detection and serotonin stability signals.
+- **Hormone-weighted policy gradients:** `NeuroChemicalEngine.update` returns a combined reward that mixes energy with dopamine/serotonin gains and a cortisol penalty. `main_asi.py` feeds this reward into the policy loss so actions are directly shaped by neurochemistry.
+- **Configurable gains:** Dopamine, serotonin, and cortisol influence magnitudes are tunable via `config.py` for quick experimentation.
+- **Complete heart inputs:** Density, symmetry, and prediction error feed the NeuroChemicalEngine, improving dopamine novelty detection and serotonin stability signals.
 - **Balanced cortisol:** Boredom-driven stress accumulates faster and decays more slowly, creating a realistic pressure to explore without immediately resetting.
 
 ### Learning Stability
@@ -117,8 +124,10 @@ python experiments/run_experiment.py --steps 50 --seed 1 --planner on --meta on
 - **Energy shaping:** Density penalties are moderated and mixed with symmetry scores for a more balanced energy landscape.
 
 ### Logging & Diagnostics
+- **Truth-vector drift tests:** Unit coverage exercises symmetry-driven truth updates to ensure manifold alignment follows grid structure.
+- **Hormone gradient tests:** Regression checks confirm dopamine spikes increase chosen action probability under the combined-reward loss.
 - **NaN/Inf guardrails:** Training steps with invalid losses are skipped after printing detailed diagnostics.
-- **Richer logs:** Periodic summaries now include hormone levels, LR, action choice, grid stats, and optional density/symmetry details when crystallization occurs.
+- **Richer logs:** Periodic summaries include hormone levels, LR, action choice, grid stats, and optional density/symmetry details when crystallization occurs.
 
 These refinements collectively produce a more stable, interpretable agent whose internal drives, crystallization events, and world interactions are easier to monitor and control.
 
