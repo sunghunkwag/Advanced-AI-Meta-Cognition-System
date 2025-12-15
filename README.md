@@ -1,4 +1,5 @@
-# Advanced AI System: Neuro-Chemical Reinforcement Learning
+# Advanced-AI-Meta-Cognition-System
+
 
 > **"From Chaos to Order. The Birth of Intrinsic Will."**
 
@@ -96,21 +97,6 @@ python experiments/run_experiment.py --steps 50 --seed 1 --planner on --meta on
 ## Validation & Testing
 - Core regression suite: `pytest` (covers JEPA predictor determinism, planner ranking, neurochemical gradients, truth-vector symmetry drift, and world-model rollouts).
 - After the latest changes, all tests pass locally (`pytest` completes in under 10s on CPU), confirming hormone-integrated policy gradients and deterministic truth alignment remain stable.
-
-### Ablation Study (10 seeds × 100 steps)
-Command: `python experiments/benchmark_suite.py --configs ABCD --seeds 10 --steps 100`
-
-| Config | Final Energy (↓) | Mean Consistency (↑) | Crystallizations | Action Entropy |
-| --- | --- | --- | --- | --- |
-| A (Baseline) | 0.800 ± 0.000 | 0.010 ± 0.000 | 0.00 | 0.000 ± 0.000 |
-| B (System-1) | 0.444 ± 0.000 | 0.028 ± 0.000 | 0.00 | 0.100 ± 0.000 |
-| C (System-1+2) | 0.800 ± 0.000 | 0.010 ± 0.000 | 0.00 | 0.300 ± 0.000 |
-| D (Full) | 0.800 ± 0.000 | 0.010 ± 0.000 | 1.00 | 0.300 ± 0.000 |
-
-Raw CSV: `experiments/results/ablation_20251215_044149.csv`.
-
-### Continuous Integration
-- CI workflow (`.github/workflows/test.yml`) runs pytest with coverage (term + HTML reports) on every push/PR and uploads the HTML report as an artifact.
 
 ---
 
