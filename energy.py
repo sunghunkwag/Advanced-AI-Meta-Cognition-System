@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import config
+
 
 class NeuroChemicalEngine:
     """
@@ -9,11 +11,13 @@ class NeuroChemicalEngine:
     Manages the emotional state and motivation of the agent via Dopamine and Serotonin.
     """
 
-    def __init__(self):
+    def __init__(self, dopamine_gain: float | None = None, serotonin_gain: float | None = None, cortisol_penalty: float | None = None):
         self.dopamine = 0.5  # Pleasure / Novelty / Learning
         self.serotonin = 0.5  # Satisfaction / Meaning / Order
         self.cortisol = 0.0  # Stress / Boredom / Chaos
-        self.dopamine_gain = 1.0
+        self.dopamine_gain = dopamine_gain if dopamine_gain is not None else config.DOPAMINE_GAIN
+        self.serotonin_gain = serotonin_gain if serotonin_gain is not None else config.SEROTONIN_GAIN
+        self.cortisol_penalty = cortisol_penalty if cortisol_penalty is not None else config.CORTISOL_PENALTY
         
         # Internal State Trackers
         self.prev_energy = float("inf")
@@ -95,6 +99,14 @@ class NeuroChemicalEngine:
         self.energy_history.append(world_energy)
         if len(self.energy_history) > 100:
             self.energy_history.pop(0)
+
+        combined_reward = (
+            -world_energy
+            + self.dopamine_gain * float(self.dopamine)
+            + self.serotonin_gain * float(self.serotonin)
+            - self.cortisol_penalty * float(self.cortisol)
+        )
+        return combined_reward
 
     def get_hormones(self):
         return {

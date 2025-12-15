@@ -53,4 +53,10 @@ class ExperimentConfig:
     grid_size: int = 16
 
 
+# Global hyperparameters for neurochemical influences
+DOPAMINE_GAIN: float = 0.5
+SEROTONIN_GAIN: float = 1.0
+CORTISOL_PENALTY: float = 0.3
+
+
 DEFAULT_CONFIG = ExperimentConfig()
