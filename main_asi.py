@@ -28,20 +28,21 @@ import numpy as np
 from typing import List
 from collections import deque
 
-from soul import get_soul_vectors
+from soul import compute_truth_vector, get_soul_vectors
 from vision import GNNObjectExtractor
 from manifold import GraphAttentionManifold
-from energy import EnergyFunction, JEPA_Predictor
+from energy import EnergyFunction, JEPA_Predictor, NeuroChemicalEngine
 from automata import ManifoldAutomata
 from world import InternalSandbox
 from action_decoder import ActionDecoder
+import config
 
 class ASIAgent:
     def __init__(self):
         # 1. Soul Injection
         print("[System] Injecting Soul...")
         self.v_identity, self.v_truth, self.v_reject = get_soul_vectors(dim=32)
-        
+
         # 2. Body Construction
         print("[System] Building Logical Body...")
         self.vision = GNNObjectExtractor(max_objects=5, feature_dim=4)
@@ -50,6 +51,11 @@ class ASIAgent:
         self.predictor = JEPA_Predictor(state_dim=32, action_dim=32)
         self.energy_fn = EnergyFunction(lambda_violation=100.0)
         self.world = InternalSandbox()
+        self.heart = NeuroChemicalEngine(
+            dopamine_gain=config.DOPAMINE_GAIN,
+            serotonin_gain=config.SEROTONIN_GAIN,
+            cortisol_penalty=config.CORTISOL_PENALTY,
+        )
         
         # Optimizer (Brain + ActionDecoder + Predictor)
         self.optimizer = torch.optim.Adam(
@@ -82,6 +88,7 @@ class ASIAgent:
             node_features, adjacency = self.vision(grid_tensor)
             print(f"[Perceive] Observed {node_features.shape[1]} objects from previous state")
         else:
+            grid_tensor = torch.zeros((6, 6))
             node_features = torch.zeros(1, 5, 4)
             adjacency = torch.eye(5).unsqueeze(0)
             print("[Perceive] Initial empty state")
@@ -124,6 +131,9 @@ class ASIAgent:
             grid_tensor = torch.tensor(grid_np, dtype=torch.float32)
             next_node_features, next_adjacency = self.vision(grid_tensor)
             print(f"[Observe] Extracted {next_node_features.shape[1]} objects")
+            self.v_truth = compute_truth_vector(grid_tensor)
+            if hasattr(self.brain, "update_truth_vector"):
+                self.brain.update_truth_vector(self.v_truth)
         else:
             next_node_features = torch.zeros(1, 5, 4)
             next_adjacency = torch.eye(5).unsqueeze(0)
@@ -163,7 +173,15 @@ class ASIAgent:
         selected_log_prob = log_probs[0, action_id]
         
         # REINFORCE with entropy bonus
-        policy_loss = selected_log_prob * energy.detach()
+        combined_reward = self.heart.update(
+            world_energy=float(energy.detach().item()),
+            consistency_score=float(1.0 - truth_distance.detach().item()),
+            density=float(grid_tensor.mean().item()) if 'grid' in self.world.global_context else 0.0,
+            symmetry=float(self.v_truth[:8].mean().item()),
+            prediction_error=float(pred_error.detach().item()),
+        )
+
+        policy_loss = -selected_log_prob * torch.tensor(combined_reward, device=selected_log_prob.device)
         entropy_bonus = -self.entropy_alpha * entropy  # Encourage exploration
         
         total_loss = energy + ewc - policy_loss + entropy_bonus
