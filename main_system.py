@@ -46,6 +46,8 @@ def main():
     
     # Advanced Learning Tracking
     energy_history = []
+    consistency_history = []
+    hormone_history = []
     action_history = []
     best_energy = float('inf')
 
@@ -65,6 +67,9 @@ def main():
             
             # === CALCULATE ENERGY ===
             world_energy = world.calculate_energy()
+
+            energy_history.append(world_energy)
+            consistency_history.append(consistency.item())
             
             # === HEART (Emotions) ===
             density = np.sum(world_state > 0.1) / world_state.size
@@ -80,7 +85,15 @@ def main():
             cortisol = hormones['cortisol']
 
             # === SOUL (Crystallization Check) ===
-            soul.update_state((dopamine, serotonin), nodes, adj)
+            hormone_history.append((dopamine, serotonin))
+            soul.update_state(
+                (dopamine, serotonin),
+                nodes,
+                adj,
+                energy_history=energy_history,
+                consistency_history=consistency_history,
+                hormone_history=hormone_history,
+            )
             ewc_loss = soul.ewc_loss(mind)
             
             # === BODY (Action Selection) ===
@@ -129,7 +142,6 @@ def main():
             
             # === REWARD SHAPING ===
             # Progress bonus: reward improvement
-            energy_history.append(world_energy)
             if len(energy_history) > 10:
                 recent_avg = np.mean(energy_history[-10:])
                 prev_avg = np.mean(energy_history[-20:-10]) if len(energy_history) >= 20 else recent_avg

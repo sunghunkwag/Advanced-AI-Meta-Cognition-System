@@ -49,7 +49,14 @@ class System2Planner:
         return objective + 0.9 * deeper_obj, trace + deeper_trace
 
 
-class PrefrontalCortex:
+class PlanningArbiter:
+    """Arbitrates when to escalate control to the planner.
+
+    This replaces the previous "PrefrontalCortex" naming to avoid confusion
+    with the willpower/episodic-memory PFC implemented in ``cortex.py``.
+    ``PrefrontalCortex`` is kept as an alias for backward compatibility.
+    """
+
     def __init__(self, planner: System2Planner, cortisol_threshold: float, consistency_threshold: float, failure_streak: int, enabled: bool = True):
         self.planner = planner
         self.cortisol_threshold = cortisol_threshold
@@ -78,3 +85,7 @@ class PrefrontalCortex:
             self.interventions += 1
             return result.action, result
         return candidate_actions[0], None
+
+
+# Backward compatibility with legacy naming used by older entrypoints/tests
+PrefrontalCortex = PlanningArbiter
